@@ -91,6 +91,7 @@ export function ApplicationColumn({
   const hasMoreApplications = visibleApplications.length < applications.length;
   const { isOver, setNodeRef } = useDroppable({
     id: `application-column:${status}`,
+    disabled: applications.length > 0,
   });
 
   useEffect(() => {

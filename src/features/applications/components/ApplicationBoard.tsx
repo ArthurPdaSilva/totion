@@ -228,7 +228,11 @@ export function ApplicationBoard({
 
     if (target && !isSameDropTarget(lastTargetRef.current, target)) {
       lastTargetRef.current = target;
-      onMovePreview(activeApplicationId, target);
+
+      // Empty columns must stay droppable until the pointer is released.
+      if (target.type === "application") {
+        onMovePreview(activeApplicationId, target);
+      }
     }
   }
 

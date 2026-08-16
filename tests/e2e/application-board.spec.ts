@@ -327,7 +327,9 @@ test("restaura um backup próprio após revisar as três colunas", async ({
   await expect(page.getByText("Pessoa Desenvolvedora Mobile")).toBeVisible();
 });
 
-test("carrega mais cards ao alcançar o fim da coluna", async ({ page }) => {
+test("carrega mais cards e inicia o drag sem reordenar em ciclo", async ({
+  page,
+}, testInfo) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Backup" }).click();
   const applications = Array.from({ length: 7 }, (_, position) => ({
@@ -367,6 +369,40 @@ test("carrega mais cards ao alcançar o fim da coluna", async ({ page }) => {
 
   await expect(appliedColumn.getByRole("article")).toHaveCount(7);
   await expect(appliedColumn.getByText("Vaga virtualizada 7")).toBeVisible();
+
+  if (testInfo.project.name === "chromium-desktop") {
+    const firstMoveButton = appliedColumn.getByRole("button", {
+      name: "Mover candidatura Vaga virtualizada 1",
+    });
+    await firstMoveButton.scrollIntoViewIfNeeded();
+    const sourceBox = await firstMoveButton.boundingBox();
+
+    if (!sourceBox) {
+      throw new Error("Não foi possível medir o card para iniciar o drag");
+    }
+
+    await page.mouse.move(
+      sourceBox.x + sourceBox.width / 2,
+      sourceBox.y + sourceBox.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2 + 12, sourceBox.y, {
+      steps: 3,
+    });
+
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Toda oportunidade merece um próximo passo.",
+      }),
+    ).toBeVisible();
+    await expect(appliedColumn.locator("article h3")).toHaveText(
+      applications.map((application) => application.name),
+    );
+
+    await page.keyboard.press("Escape");
+    await page.mouse.up();
+  }
 });
 
 test("gerencia recursos, busca em todas as listas e persiste o tema", async ({
