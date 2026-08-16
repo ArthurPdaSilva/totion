@@ -6,7 +6,7 @@ Aplicação web para candidatos organizarem vagas e acompanharem cada candidatur
 
 O projeto possui sua primeira fatia vertical implementada. A aplicação exibe uma faixa responsiva com portais de vagas, os três status das candidaturas e anotações livres. Candidaturas podem ser movidas e reordenadas; portais e anotações possuem listas estáticas próprias. Todos os dados são persistidos no IndexedDB do navegador.
 
-A aplicação também exporta e restaura backups próprios e versionados do quadro. O CSV histórico permanece no repositório apenas como registro da migração inicial e não é necessário para usar a aplicação.
+A aplicação também exporta e restaura backups próprios e versionados do quadro. O CSV histórico permanece no repositório apenas como registro da migração inicial e não é necessário para usar a aplicação. A versão pública está hospedada na Vercel em [totion-nu.vercel.app](https://totion-nu.vercel.app/).
 
 ## Objetivo
 
@@ -207,6 +207,7 @@ Esses itens exigem uma nova decisão de produto antes da implementação.
 - [x] Implementar exportação e restauração de backup dos dados locais.
 - [x] Implementar portais de vagas e anotações independentes.
 - [x] Implementar busca universal e tema escuro persistido.
+- [x] Publicar a aplicação na Vercel.
 
 ## Como Executar
 
@@ -243,7 +244,17 @@ O workflow valida os documentos obrigatórios, exige `package.json`, `package-lo
 5. `npm run test:e2e`
 6. `npm run build`
 
-O deploy contínuo ainda não está configurado. O provedor e a estratégia de publicação serão definidos em uma decisão posterior.
+## Publicação
+
+A aplicação está publicada na Vercel:
+
+- **Produção:** [https://totion-nu.vercel.app/](https://totion-nu.vercel.app/)
+- **Branch de produção:** `main`
+- **Preview deployments:** gerados pela integração da Vercel para as demais branches e pull requests.
+
+O workflow de integração contínua permanece responsável por validar typecheck, Biome, testes, Playwright e build. A Vercel realiza a hospedagem e a publicação da aplicação estática.
+
+Como o Totion é local-first, os dados permanecem no IndexedDB e são isolados por origem. Dados criados em preview deployments não são compartilhados com o domínio de produção.
 
 ## Documentação Para Desenvolvimento
 
