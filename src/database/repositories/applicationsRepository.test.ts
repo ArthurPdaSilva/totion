@@ -98,35 +98,6 @@ describe("DexieApplicationsRepository", () => {
     ]);
   });
 
-  it("substitui o quadro de forma transacional ao restaurar um backup", async () => {
-    const database = createDatabase();
-    const repository = new DexieApplicationsRepository(database);
-    await repository.create(createApplication("current", "applied"));
-    const restored = [
-      { ...createApplication("restored-applied", "applied"), position: 0 },
-      { ...createApplication("restored-closed", "closed"), position: 0 },
-    ];
-
-    await repository.replaceAll(restored);
-    await expect(repository.list()).resolves.toMatchObject([
-      { id: "restored-applied", status: "applied", position: 0 },
-      { id: "restored-closed", status: "closed", position: 0 },
-    ]);
-
-    vi.spyOn(database.applications, "bulkAdd").mockRejectedValueOnce(
-      new Error("Falha sintética na restauração"),
-    );
-    await expect(
-      repository.replaceAll([
-        { ...createApplication("replacement", "in_progress"), position: 0 },
-      ]),
-    ).rejects.toThrow("Falha sintética na restauração");
-    await expect(repository.list()).resolves.toMatchObject([
-      { id: "restored-applied" },
-      { id: "restored-closed" },
-    ]);
-  });
-
   it("atualiza os dados sem alterar identidade, criação ou posição", async () => {
     const repository = new DexieApplicationsRepository(createDatabase());
     await repository.create(createApplication("applied-1", "applied"));

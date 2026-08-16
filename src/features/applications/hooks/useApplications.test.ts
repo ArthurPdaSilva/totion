@@ -33,9 +33,6 @@ describe("useApplications", () => {
       async create() {
         throw new Error("Não usado neste teste");
       },
-      async replaceAll() {
-        throw new Error("Não usado neste teste");
-      },
       async updateById() {
         return [
           {
@@ -86,9 +83,6 @@ describe("useApplications", () => {
       async create() {
         throw new Error("Não usado neste teste");
       },
-      async replaceAll() {
-        throw new Error("Não usado neste teste");
-      },
       async updateById() {
         return [];
       },
@@ -133,9 +127,6 @@ describe("useApplications", () => {
         return INITIAL_APPLICATIONS;
       },
       async create() {
-        throw new Error("Não usado neste teste");
-      },
-      async replaceAll() {
         throw new Error("Não usado neste teste");
       },
       async updateById() {

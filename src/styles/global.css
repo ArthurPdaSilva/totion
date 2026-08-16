@@ -10,13 +10,21 @@ html {
   background: var(--color-canvas);
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   min-width: 20rem;
   min-height: 100vh;
   margin: 0;
   color: var(--color-ink);
   background:
-    radial-gradient(circle at 8% 0%, rgb(187 77 54 / 9%), transparent 24rem),
+    radial-gradient(
+      circle at 8% 0%,
+      color-mix(in srgb, var(--color-brand) 9%, transparent),
+      transparent 24rem
+    ),
     linear-gradient(180deg, var(--color-panel) 0, var(--color-canvas) 21rem);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;

@@ -7,6 +7,9 @@ import { notification } from "../shared/notifications";
 afterEach(() => {
   cleanup();
   notification.dismissAll();
+  localStorage.clear();
+  document.documentElement.classList.remove("dark");
+  document.documentElement.style.colorScheme = "";
 });
 
 if (!HTMLDialogElement.prototype.showModal) {

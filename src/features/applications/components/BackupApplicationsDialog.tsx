@@ -1,5 +1,6 @@
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { notification } from "../../../shared/notifications";
+import type { JobPortal, WorkspaceNote } from "../../resources/types/resource";
 import {
   APPLICATION_STATUS_LABELS,
   APPLICATION_STATUSES,
@@ -13,12 +14,16 @@ import type { Application } from "../types/application";
 
 type BackupApplicationsDialogProps = {
   applications: Application[];
+  jobPortals: JobPortal[];
+  notes: WorkspaceNote[];
   onClose: () => void;
-  onRestore: (applications: Application[]) => Promise<void>;
+  onRestore: (backup: ApplicationBackup) => Promise<void>;
 };
 
 export function BackupApplicationsDialog({
   applications,
+  jobPortals,
+  notes,
   onClose,
   onRestore,
 }: BackupApplicationsDialogProps) {
@@ -45,8 +50,11 @@ export function BackupApplicationsDialog({
   }
 
   function exportBackup() {
-    const { content, fileName: backupFileName } =
-      createApplicationBackup(applications);
+    const { content, fileName: backupFileName } = createApplicationBackup({
+      applications,
+      jobPortals,
+      notes,
+    });
     const url = URL.createObjectURL(
       new Blob([content], { type: "application/json" }),
     );
@@ -56,11 +64,7 @@ export function BackupApplicationsDialog({
     link.click();
     URL.revokeObjectURL(url);
 
-    notification.success(
-      applications.length === 1
-        ? "Backup de 1 candidatura exportado."
-        : `Backup de ${applications.length} candidaturas exportado.`,
-    );
+    notification.success("Backup completo exportado.");
   }
 
   async function selectFile(event: ChangeEvent<HTMLInputElement>) {
@@ -98,12 +102,8 @@ export function BackupApplicationsDialog({
     setIsRestoring(true);
 
     try {
-      await onRestore(backup.applications);
-      notification.success(
-        backup.applications.length === 1
-          ? "Backup restaurado com 1 candidatura."
-          : `Backup restaurado com ${backup.applications.length} candidaturas.`,
-      );
+      await onRestore(backup);
+      notification.success("Backup completo restaurado.");
       onClose();
     } catch {
       setRestoreError(
@@ -137,8 +137,8 @@ export function BackupApplicationsDialog({
               Backup do quadro
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
-              Guarde uma cópia completa das candidaturas ou restaure um arquivo
-              exportado anteriormente pelo Totion.
+              Guarde uma cópia completa das candidaturas, portais e anotações ou
+              restaure um arquivo exportado anteriormente pelo Totion.
             </p>
           </div>
           <button
@@ -165,7 +165,7 @@ export function BackupApplicationsDialog({
             Exportar
           </h3>
           <p className="mt-1 text-sm leading-6 text-muted">
-            O arquivo preserva os dados e a ordem dos cards nas três colunas.
+            O arquivo preserva todas as cinco listas e a ordem das candidaturas.
           </p>
           <button
             type="button"
@@ -173,8 +173,7 @@ export function BackupApplicationsDialog({
             onClick={exportBackup}
             disabled={isRestoring}
           >
-            Exportar {applications.length}{" "}
-            {applications.length === 1 ? "candidatura" : "candidaturas"}
+            Exportar backup completo
           </button>
         </section>
 
@@ -219,7 +218,13 @@ export function BackupApplicationsDialog({
           {backup ? (
             <div className="mt-5">
               <h4 className="text-sm font-bold">Conteúdo do backup</h4>
-              <dl className="mt-3 grid grid-cols-3 gap-2">
+              <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                <div className="rounded-card border border-line bg-panel px-3 py-3">
+                  <dt className="text-xs font-bold text-muted">Portais</dt>
+                  <dd className="mt-1 font-display text-2xl font-bold tabular-nums">
+                    {backup.jobPortals.length}
+                  </dd>
+                </div>
                 {APPLICATION_STATUSES.map((status) => (
                   <div
                     key={status}
@@ -237,11 +242,16 @@ export function BackupApplicationsDialog({
                     </dd>
                   </div>
                 ))}
+                <div className="rounded-card border border-line bg-panel px-3 py-3">
+                  <dt className="text-xs font-bold text-muted">Anotações</dt>
+                  <dd className="mt-1 font-display text-2xl font-bold tabular-nums">
+                    {backup.notes.length}
+                  </dd>
+                </div>
               </dl>
               <p className="mt-4 rounded-card bg-danger-soft px-4 py-3 text-sm leading-6 text-danger">
-                A restauração substituirá as {applications.length} candidaturas
-                atuais. Exporte um backup antes de continuar se quiser preservar
-                este quadro.
+                A restauração substituirá as cinco listas atuais. Exporte um
+                backup antes de continuar se quiser preservar estes dados.
               </p>
               <label className="mt-4 flex min-h-11 items-start gap-3 text-sm leading-6 font-bold">
                 <input
@@ -253,7 +263,8 @@ export function BackupApplicationsDialog({
                   }
                   disabled={isRestoring}
                 />
-                Entendo que o quadro atual será substituído por este backup.
+                Entendo que todos os dados atuais serão substituídos por este
+                backup.
               </label>
             </div>
           ) : null}
@@ -273,9 +284,7 @@ export function BackupApplicationsDialog({
             onClick={restoreBackup}
             disabled={!backup || !hasConfirmedReplacement || isRestoring}
           >
-            {isRestoring
-              ? "Restaurando..."
-              : `Restaurar ${backup?.applications.length ?? 0} ${backup?.applications.length === 1 ? "candidatura" : "candidaturas"}`}
+            {isRestoring ? "Restaurando..." : "Restaurar backup completo"}
           </button>
         </section>
       </div>

@@ -12,8 +12,16 @@ import type {
   ApplicationUpdate,
   ApplicationWithoutPosition,
 } from "../database/repositories/applicationsRepository";
+import type {
+  WorkspaceRepository,
+  WorkspaceSnapshot,
+} from "../database/repositories/workspaceRepository";
 import { createApplicationBackup } from "../features/applications/services/applicationBackup";
 import type { Application } from "../features/applications/types/application";
+import type {
+  JobPortal,
+  WorkspaceNote,
+} from "../features/resources/types/resource";
 import { App } from "./App";
 
 class MemoryApplicationsRepository implements ApplicationsRepository {
@@ -22,7 +30,6 @@ class MemoryApplicationsRepository implements ApplicationsRepository {
   shouldFailUpdate = false;
   shouldFailDeletion = false;
   shouldFailMove = false;
-  shouldFailReplacement = false;
 
   async list() {
     return [...this.applications];
@@ -40,14 +47,6 @@ class MemoryApplicationsRepository implements ApplicationsRepository {
     this.applications.push(persistedApplication);
 
     return persistedApplication;
-  }
-
-  async replaceAll(applications: Application[]) {
-    if (this.shouldFailReplacement) {
-      throw new Error("Falha sintética");
-    }
-
-    this.applications = [...applications];
   }
 
   async updateById(id: string, update: ApplicationUpdate) {
@@ -155,6 +154,63 @@ class MemoryApplicationsRepository implements ApplicationsRepository {
   }
 }
 
+class MemoryWorkspaceRepository implements WorkspaceRepository {
+  jobPortals: JobPortal[] = [];
+  notes: WorkspaceNote[] = [];
+
+  constructor(
+    private readonly applicationsRepository: MemoryApplicationsRepository,
+  ) {}
+
+  async listJobPortals() {
+    return [...this.jobPortals];
+  }
+
+  async createJobPortal(jobPortal: JobPortal) {
+    this.jobPortals.unshift(jobPortal);
+    return jobPortal;
+  }
+
+  async updateJobPortal(jobPortal: JobPortal) {
+    this.jobPortals = this.jobPortals.map((currentJobPortal) =>
+      currentJobPortal.id === jobPortal.id ? jobPortal : currentJobPortal,
+    );
+    return jobPortal;
+  }
+
+  async deleteJobPortal(id: string) {
+    this.jobPortals = this.jobPortals.filter(
+      (jobPortal) => jobPortal.id !== id,
+    );
+  }
+
+  async listNotes() {
+    return [...this.notes];
+  }
+
+  async createNote(note: WorkspaceNote) {
+    this.notes.unshift(note);
+    return note;
+  }
+
+  async updateNote(note: WorkspaceNote) {
+    this.notes = this.notes.map((currentNote) =>
+      currentNote.id === note.id ? note : currentNote,
+    );
+    return note;
+  }
+
+  async deleteNote(id: string) {
+    this.notes = this.notes.filter((note) => note.id !== id);
+  }
+
+  async restore({ applications, jobPortals, notes }: WorkspaceSnapshot) {
+    this.applicationsRepository.applications = [...applications];
+    this.jobPortals = [...jobPortals];
+    this.notes = [...notes];
+  }
+}
+
 function createPersistedApplication(
   overrides: Partial<Application> = {},
 ): Application {
@@ -172,7 +228,177 @@ function createPersistedApplication(
   };
 }
 
+function createJobPortal(overrides: Partial<JobPortal> = {}): JobPortal {
+  return {
+    id: "portal-1",
+    name: "Portal de Vagas",
+    url: "https://portal.example",
+    createdAt: "2026-08-16T12:00:00.000Z",
+    updatedAt: "2026-08-16T12:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function createWorkspaceNote(
+  overrides: Partial<WorkspaceNote> = {},
+): WorkspaceNote {
+  return {
+    id: "note-1",
+    content: "Revisar currículo",
+    createdAt: "2026-08-16T12:00:00.000Z",
+    updatedAt: "2026-08-16T12:00:00.000Z",
+    ...overrides,
+  };
+}
+
 describe("App", () => {
+  it("exibe as cinco listas na ordem definida", async () => {
+    const repository = new MemoryApplicationsRepository();
+    render(<App repository={repository} />);
+
+    const board = await screen.findByRole("region", {
+      name: "Quadro de candidaturas",
+    });
+    expect(
+      within(board)
+        .getAllByRole("heading", { level: 2 })
+        .map((heading) => heading.textContent),
+    ).toEqual([
+      "Portais de Vagas",
+      "Aplicada",
+      "Em andamento",
+      "Encerrada",
+      "Anotações",
+    ]);
+  });
+
+  it("cria, edita e exclui portais e anotações sem controles de drag", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    const workspaceRepository = new MemoryWorkspaceRepository(repository);
+    render(
+      <App repository={repository} workspaceRepository={workspaceRepository} />,
+    );
+
+    const portalsColumn = await screen.findByRole("region", {
+      name: "Portais de Vagas",
+    });
+    await user.click(
+      within(portalsColumn).getByRole("button", { name: "Adicionar portal" }),
+    );
+    await user.type(screen.getByLabelText("Nome do portal"), "LinkedIn");
+    await user.type(
+      screen.getByLabelText("Link do portal"),
+      "https://www.linkedin.com/jobs",
+    );
+    await user.click(screen.getByRole("button", { name: "Salvar portal" }));
+
+    const portalCard = within(portalsColumn).getByRole("article");
+    expect(within(portalCard).queryByText(/Mover/)).not.toBeInTheDocument();
+    expect(within(portalCard).getByText("LinkedIn")).toBeInTheDocument();
+    expect(within(portalCard).getByRole("link")).toHaveAttribute(
+      "rel",
+      "noopener noreferrer",
+    );
+    await user.click(
+      within(portalCard).getByRole("button", { name: "Editar" }),
+    );
+    await user.clear(screen.getByLabelText("Nome do portal"));
+    await user.type(screen.getByLabelText("Nome do portal"), "LinkedIn Jobs");
+    await user.click(screen.getByRole("button", { name: "Salvar portal" }));
+    expect(
+      within(portalsColumn).getByText("LinkedIn Jobs"),
+    ).toBeInTheDocument();
+
+    const notesColumn = screen.getByRole("region", { name: "Anotações" });
+    await user.click(
+      within(notesColumn).getByRole("button", { name: "Nova anotação" }),
+    );
+    await user.type(
+      screen.getByLabelText("Conteúdo"),
+      "Revisar o currículo antes da próxima candidatura.",
+    );
+    await user.click(screen.getByRole("button", { name: "Salvar anotação" }));
+    expect(
+      within(notesColumn).getByText(/Revisar o currículo/),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(portalsColumn).getByRole("button", { name: "Excluir" }),
+    );
+    await user.click(
+      within(screen.getByRole("dialog", { name: "Excluir portal?" })).getByRole(
+        "button",
+        { name: "Excluir portal" },
+      ),
+    );
+    expect(
+      within(portalsColumn).queryByRole("article"),
+    ).not.toBeInTheDocument();
+    expect(workspaceRepository.jobPortals).toHaveLength(0);
+    expect(workspaceRepository.notes).toHaveLength(1);
+  });
+
+  it("busca sem acentos em candidaturas, portais e anotações", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    repository.applications = [
+      createPersistedApplication({ name: "Vaga currículo especial" }),
+      createPersistedApplication({
+        id: "application-hidden",
+        name: "Outra oportunidade",
+        position: 1,
+      }),
+    ];
+    const workspaceRepository = new MemoryWorkspaceRepository(repository);
+    workspaceRepository.jobPortals = [
+      createJobPortal({ name: "Portal Currículo Especial" }),
+    ];
+    workspaceRepository.notes = [
+      createWorkspaceNote({ content: "Currículo especial revisado" }),
+    ];
+    render(
+      <App repository={repository} workspaceRepository={workspaceRepository} />,
+    );
+
+    await user.type(
+      await screen.findByRole("searchbox", {
+        name: "Buscar em todo o Totion",
+      }),
+      "curriculo especial",
+    );
+
+    expect(
+      await screen.findByText(
+        "3 resultados encontrados. O movimento de cards fica pausado durante a busca.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Vaga currículo especial")).toBeInTheDocument();
+    expect(screen.getByText("Portal Currículo Especial")).toBeInTheDocument();
+    expect(screen.getByText("Currículo especial revisado")).toBeInTheDocument();
+    expect(screen.queryByText("Outra oportunidade")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Mover candidatura Vaga currículo especial",
+      }),
+    ).toBeDisabled();
+  });
+
+  it("alterna e persiste a preferência de tema", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    render(<App repository={repository} />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Ativar tema escuro" }),
+    );
+    expect(document.documentElement).toHaveClass("dark");
+    expect(localStorage.getItem("totion-theme")).toBe("dark");
+    expect(
+      screen.getByRole("button", { name: "Ativar tema claro" }),
+    ).toBeInTheDocument();
+  });
+
   it("renderiza as três colunas e cria uma candidatura persistida", async () => {
     const user = userEvent.setup();
     const repository = new MemoryApplicationsRepository();
@@ -222,7 +448,7 @@ describe("App", () => {
       "https://empresa.example/vagas/react",
     );
     await user.type(
-      screen.getByLabelText(/Anotações/),
+      screen.getByLabelText("Anotações (opcional)"),
       "Retorno esperado na próxima semana",
     );
     await user.click(
@@ -263,6 +489,7 @@ describe("App", () => {
   it("renderiza cinco cards por coluna e carrega o próximo lote", async () => {
     const user = userEvent.setup();
     const repository = new MemoryApplicationsRepository();
+    const workspaceRepository = new MemoryWorkspaceRepository(repository);
     repository.applications = Array.from({ length: 7 }, (_, position) =>
       createPersistedApplication({
         id: `application-${position + 1}`,
@@ -270,7 +497,9 @@ describe("App", () => {
         position,
       }),
     );
-    render(<App repository={repository} />);
+    render(
+      <App repository={repository} workspaceRepository={workspaceRepository} />,
+    );
 
     const appliedColumn = await screen.findByRole("region", {
       name: "Aplicada",
@@ -352,10 +581,13 @@ describe("App", () => {
   it("revisa e restaura um backup próprio do Totion", async () => {
     const user = userEvent.setup();
     const repository = new MemoryApplicationsRepository();
+    const workspaceRepository = new MemoryWorkspaceRepository(repository);
     repository.applications = [
       createPersistedApplication({ name: "Anterior" }),
     ];
-    render(<App repository={repository} />);
+    render(
+      <App repository={repository} workspaceRepository={workspaceRepository} />,
+    );
 
     await screen.findByRole("region", { name: "Aplicada" });
     const backupButton = screen.getByRole("button", { name: "Backup" });
@@ -376,8 +608,23 @@ describe("App", () => {
         status: "closed",
       }),
     ];
+    const backupJobPortals = [
+      createJobPortal({ id: "restored-portal", name: "Gupy" }),
+    ];
+    const backupNotes = [
+      createWorkspaceNote({
+        id: "restored-note",
+        content: "Preparar apresentação pessoal",
+      }),
+    ];
     const backupFile = new File(
-      [createApplicationBackup(backupApplications).content],
+      [
+        createApplicationBackup({
+          applications: backupApplications,
+          jobPortals: backupJobPortals,
+          notes: backupNotes,
+        }).content,
+      ],
       "candidaturas-sinteticas.totion",
       { type: "application/json" },
     );
@@ -388,12 +635,12 @@ describe("App", () => {
 
     expect(await screen.findByText("Conteúdo do backup")).toBeInTheDocument();
     const restoreButton = screen.getByRole("button", {
-      name: "Restaurar 3 candidaturas",
+      name: "Restaurar backup completo",
     });
     expect(restoreButton).toBeDisabled();
     await user.click(
       screen.getByLabelText(
-        "Entendo que o quadro atual será substituído por este backup.",
+        "Entendo que todos os dados atuais serão substituídos por este backup.",
       ),
     );
     await user.click(restoreButton);
@@ -418,6 +665,12 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("Anterior")).not.toBeInTheDocument();
     expect(repository.applications).toEqual(backupApplications);
+    expect(workspaceRepository.jobPortals).toEqual(backupJobPortals);
+    expect(workspaceRepository.notes).toEqual(backupNotes);
+    expect(screen.getByText("Gupy")).toBeInTheDocument();
+    expect(
+      screen.getByText("Preparar apresentação pessoal"),
+    ).toBeInTheDocument();
     expect(backupButton).toHaveFocus();
   });
 
@@ -454,7 +707,7 @@ describe("App", () => {
     expect(screen.getByLabelText(/Link da vaga/)).toHaveValue(
       "https://empresa.example/vaga-original",
     );
-    expect(screen.getByLabelText(/Anotações/)).toHaveValue(
+    expect(screen.getByLabelText("Anotações (opcional)")).toHaveValue(
       "Contato inicial realizado",
     );
 
@@ -464,8 +717,11 @@ describe("App", () => {
       "Engenheiro de Software",
     );
     await user.selectOptions(screen.getByLabelText("Status"), "closed");
-    await user.clear(screen.getByLabelText(/Anotações/));
-    await user.type(screen.getByLabelText(/Anotações/), "Processo finalizado");
+    await user.clear(screen.getByLabelText("Anotações (opcional)"));
+    await user.type(
+      screen.getByLabelText("Anotações (opcional)"),
+      "Processo finalizado",
+    );
     await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
     expect(

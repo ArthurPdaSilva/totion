@@ -14,7 +14,6 @@ export type ApplicationUpdate = Pick<
 export interface ApplicationsRepository {
   list(): Promise<Application[]>;
   create(application: ApplicationWithoutPosition): Promise<Application>;
-  replaceAll(applications: Application[]): Promise<void>;
   updateById(id: string, update: ApplicationUpdate): Promise<Application[]>;
   moveById(
     id: string,
@@ -104,20 +103,6 @@ export class DexieApplicationsRepository implements ApplicationsRepository {
         await this.database.applications.add(persistedApplication);
 
         return persistedApplication;
-      },
-    );
-  }
-
-  async replaceAll(applications: Application[]) {
-    return this.database.transaction(
-      "rw",
-      this.database.applications,
-      async () => {
-        await this.database.applications.clear();
-
-        if (applications.length > 0) {
-          await this.database.applications.bulkAdd(applications);
-        }
       },
     );
   }

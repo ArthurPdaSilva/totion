@@ -6,7 +6,7 @@ Totion é uma aplicação web local-first para candidatos acompanharem vagas em 
 
 Toda interface, mensagem de validação e texto apresentado ao usuário deve estar em português brasileiro. Nomes técnicos, identificadores e código devem estar em inglês.
 
-A primeira fatia vertical de criação, listagem, edição, exclusão e drag-and-drop está implementada. A aplicação também exporta e restaura backups locais próprios, com validação, prévia por status, confirmação e gravação transacional.
+A primeira fatia vertical de criação, listagem, edição, exclusão e drag-and-drop está implementada. A faixa principal também contém listas estáticas de portais e anotações, busca universal e tema escuro persistido. A aplicação exporta e restaura backups locais próprios com gravação transacional.
 
 ## Fonte De Verdade
 
@@ -21,7 +21,8 @@ Quando documentação e implementação divergirem, confirme se houve uma decis�
 
 ### Quadro
 
-- Exibir exatamente as colunas Aplicada, Em andamento e Encerrada.
+- Exibir Portais de Vagas, Aplicada, Em andamento, Encerrada e Anotações, nesta ordem.
+- Manter Aplicada, Em andamento e Encerrada como os únicos status e as únicas colunas arrastáveis.
 - Exibir a contagem de cards em cada coluna.
 - Criar, visualizar, editar e excluir candidaturas.
 - Mover cards entre colunas por drag-and-drop.
@@ -38,6 +39,14 @@ Cada item possui:
 - Data de aplicação obrigatória.
 - Link opcional da vaga.
 - Anotações opcionais.
+
+### Recursos Estáticos
+
+- Portais de Vagas possuem nome e URL HTTP(S) obrigatórios.
+- Anotações independentes possuem somente conteúdo obrigatório.
+- Portais e anotações permitem criar, editar e excluir, mas nunca são draggable ou droppable.
+- A busca universal filtra candidaturas, portais e anotações sem diferenciar caixa ou acentos.
+- O drag-and-drop fica desabilitado enquanto houver um filtro de busca ativo.
 
 ## Regras Críticas De Negócio
 
@@ -92,7 +101,8 @@ A estratégia de `position` deve permitir inserções e reordenações consisten
 
 - O IndexedDB é a fonte persistente do MVP.
 - O backup próprio usa um arquivo `.totion` em JSON, com formato e versão explícitos.
-- A restauração valida todo o arquivo e substitui o quadro em uma única transação após confirmação explícita.
+- A versão atual do backup inclui candidaturas, portais e anotações e mantém leitura da versão anterior.
+- A restauração valida todo o arquivo e substitui todas as stores em uma única transação após confirmação explícita.
 - Toda evolução de schema deve ser versionada por migration.
 - Componentes e hooks de interface não acessam Dexie diretamente.
 - Repositories encapsulam consultas e persistência.
@@ -137,6 +147,7 @@ src/
       schemas/            # Validação das entradas
       services/           # Regras de movimento e ordenação
       types/              # Tipos específicos da feature
+    resources/            # Portais e anotações não arrastáveis
   database/
     migrations/           # Versões do IndexedDB
     repositories/         # Persistência e consultas
@@ -172,6 +183,21 @@ type Application = {
   jobUrl: string | null;
   notes: string | null;
   position: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type JobPortal = {
+  id: string;
+  name: string;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type WorkspaceNote = {
+  id: string;
+  content: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -211,6 +237,7 @@ Limites máximos de texto devem ser decididos e testados antes da implementaçã
 - Respeitar `prefers-reduced-motion` nas animações.
 - No mobile, permitir navegação horizontal pelas colunas sem bloquear a rolagem vertical da página.
 - Preservar os padrões visuais já implementados antes de introduzir novos componentes.
+- O tema inicia claro, é alternado por controle acessível e persiste somente a escolha manual no `localStorage`.
 
 ## CSV Legado
 

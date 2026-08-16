@@ -2,13 +2,21 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      try {
+        if (localStorage.getItem("totion-theme") === "dark") {
+          document.documentElement.classList.add("dark");
+          document.documentElement.style.colorScheme = "dark";
+        }
+      } catch {}
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/assets/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="icon" href="/assets/favicon.ico" sizes="any" />
     <meta
       name="description"
-      content="Organize suas candidaturas em um quadro visual e acompanhe cada etapa da busca por emprego."
+      content="Organize candidaturas, portais de vagas e anotações em um quadro visual para acompanhar sua busca por emprego."
     />
     <title>Totion | Quadro de candidaturas</title>
   </head>

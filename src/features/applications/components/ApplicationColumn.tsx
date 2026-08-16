@@ -17,6 +17,8 @@ import { SortableApplicationCard } from "./SortableApplicationCard";
 type ApplicationColumnProps = {
   status: ApplicationStatus;
   applications: Application[];
+  totalCount: number;
+  isFiltered: boolean;
   activeApplicationId: string | null;
   isDragActive: boolean;
   isDragDisabled: boolean;
@@ -61,6 +63,8 @@ const STATUS_STYLES = {
 export function ApplicationColumn({
   status,
   applications,
+  totalCount,
+  isFiltered,
   activeApplicationId,
   isDragActive,
   isDragDisabled,
@@ -87,7 +91,6 @@ export function ApplicationColumn({
   const hasMoreApplications = visibleApplications.length < applications.length;
   const { isOver, setNodeRef } = useDroppable({
     id: `application-column:${status}`,
-    disabled: applications.length > 0,
   });
 
   useEffect(() => {
@@ -157,9 +160,13 @@ export function ApplicationColumn({
         <span
           className={`inline-flex min-w-7 items-center justify-center rounded-full px-2 py-1 text-xs font-bold tabular-nums ${styles.count}`}
           role="status"
-          aria-label={`${applications.length} ${applications.length === 1 ? "candidatura" : "candidaturas"}`}
+          aria-label={
+            isFiltered
+              ? `${applications.length} de ${totalCount} candidaturas encontradas`
+              : `${totalCount} ${totalCount === 1 ? "candidatura" : "candidaturas"}`
+          }
         >
-          {applications.length}
+          {isFiltered ? `${applications.length}/${totalCount}` : totalCount}
         </span>
       </header>
 
@@ -182,7 +189,9 @@ export function ApplicationColumn({
             ))
           ) : (
             <div className="flex min-h-32 items-center justify-center rounded-card border border-dashed border-line-strong bg-card/45 px-6 text-center text-sm leading-6 text-muted">
-              Nenhuma candidatura aqui ainda.
+              {isFiltered
+                ? "Nenhuma candidatura encontrada."
+                : "Nenhuma candidatura aqui ainda."}
             </div>
           )}
         </div>

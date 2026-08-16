@@ -29,16 +29,37 @@ test("move uma candidatura para uma coluna vazia e persiste após recarregar", a
   });
 
   await expect(moveButton).toBeVisible();
-
   if (testInfo.project.name === "chromium-mobile") {
     await moveButton.dragTo(closedColumn);
   } else {
+    const board = page.getByRole("region", { name: "Quadro de candidaturas" });
+    await board.evaluate((element) => {
+      element.scrollLeft += 280;
+    });
+    await expect
+      .poll(() => board.evaluate((element) => element.scrollLeft))
+      .toBeGreaterThan(0);
+    await expect(moveButton).toBeInViewport();
+    await expect(closedColumn).toBeInViewport();
     const sourceBox = await moveButton.boundingBox();
     const targetBox = await closedColumn.boundingBox();
 
     if (!sourceBox || !targetBox) {
       throw new Error("Não foi possível medir o card e a coluna de destino");
     }
+
+    const viewport = page.viewportSize();
+
+    if (!viewport) {
+      throw new Error("Não foi possível medir a viewport");
+    }
+
+    const visibleTargetLeft = Math.max(0, targetBox.x);
+    const visibleTargetRight = Math.min(
+      viewport.width,
+      targetBox.x + targetBox.width,
+    );
+    const visibleTargetX = (visibleTargetLeft + visibleTargetRight) / 2;
 
     await page.mouse.move(
       sourceBox.x + sourceBox.width / 2,
@@ -48,11 +69,9 @@ test("move uma candidatura para uma coluna vazia e persiste após recarregar", a
     await page.mouse.move(sourceBox.x + sourceBox.width / 2 + 12, sourceBox.y, {
       steps: 3,
     });
-    await page.mouse.move(
-      targetBox.x + targetBox.width / 2,
-      targetBox.y + targetBox.height - 24,
-      { steps: 20 },
-    );
+    await page.mouse.move(visibleTargetX, targetBox.y + 120, {
+      steps: 20,
+    });
     await page.mouse.up();
   }
 
@@ -162,7 +181,9 @@ test("altera o status pelo formulário e persiste após recarregar", async ({
     })
     .click();
   await page.getByLabel("Status").selectOption("closed");
-  await page.getByLabel(/Anotações/).fill("Processo encerrado");
+  await page
+    .getByRole("textbox", { name: "Anotações (opcional)" })
+    .fill("Processo encerrado");
   await page.getByRole("button", { name: "Salvar alterações" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 
@@ -262,7 +283,7 @@ test("restaura um backup próprio após revisar as três colunas", async ({
   await page.goto("/");
   await page.getByRole("button", { name: "Backup" }).click();
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Exportar 0 candidaturas" }).click();
+  await page.getByRole("button", { name: "Exportar backup completo" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(
     /^totion-backup-\d{4}-\d{2}-\d{2}\.totion$/,
@@ -273,9 +294,11 @@ test("restaura um backup próprio após revisar as três colunas", async ({
 
   await expect(page.getByText("Conteúdo do backup")).toBeVisible();
   await page
-    .getByLabel("Entendo que o quadro atual será substituído por este backup.")
+    .getByLabel(
+      "Entendo que todos os dados atuais serão substituídos por este backup.",
+    )
     .check();
-  await page.getByRole("button", { name: "Restaurar 3 candidaturas" }).click();
+  await page.getByRole("button", { name: "Restaurar backup completo" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 
   await expect(
@@ -327,9 +350,11 @@ test("carrega mais cards ao alcançar o fim da coluna", async ({ page }) => {
     ),
   });
   await page
-    .getByLabel("Entendo que o quadro atual será substituído por este backup.")
+    .getByLabel(
+      "Entendo que todos os dados atuais serão substituídos por este backup.",
+    )
     .check();
-  await page.getByRole("button", { name: "Restaurar 7 candidaturas" }).click();
+  await page.getByRole("button", { name: "Restaurar backup completo" }).click();
 
   const appliedColumn = page.getByRole("region", { name: "Aplicada" });
   await expect(appliedColumn.getByRole("article")).toHaveCount(5);
@@ -338,6 +363,52 @@ test("carrega mais cards ao alcançar o fim da coluna", async ({ page }) => {
 
   await expect(appliedColumn.getByRole("article")).toHaveCount(7);
   await expect(appliedColumn.getByText("Vaga virtualizada 7")).toBeVisible();
+});
+
+test("gerencia recursos, busca em todas as listas e persiste o tema", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const portalsColumn = page.getByRole("region", { name: "Portais de Vagas" });
+  await portalsColumn.getByRole("button", { name: "Adicionar portal" }).click();
+  await page.getByLabel("Nome do portal").fill("LinkedIn Jobs");
+  await page.getByLabel("Link do portal").fill("https://www.linkedin.com/jobs");
+  await page.getByRole("button", { name: "Salvar portal" }).click();
+  await expect(portalsColumn.getByText("LinkedIn Jobs")).toBeVisible();
+  await expect(portalsColumn.getByRole("link")).toHaveAttribute(
+    "rel",
+    "noopener noreferrer",
+  );
+  await expect(
+    portalsColumn.getByRole("button", { name: /Mover/ }),
+  ).toHaveCount(0);
+
+  const notesColumn = page.getByRole("region", { name: "Anotações" });
+  await notesColumn.getByRole("button", { name: "Nova anotação" }).click();
+  await page
+    .getByLabel("Conteúdo")
+    .fill("Revisar currículo antes da entrevista");
+  await page.getByRole("button", { name: "Salvar anotação" }).click();
+  await expect(notesColumn.getByText(/Revisar currículo/)).toBeVisible();
+
+  await page
+    .getByRole("searchbox", { name: "Buscar em todo o Totion" })
+    .fill("curriculo");
+  await expect(
+    page.getByText("1 resultado encontrado.", { exact: false }),
+  ).toBeVisible();
+  await expect(notesColumn.getByText(/Revisar currículo/)).toBeVisible();
+  await expect(portalsColumn.getByText("LinkedIn Jobs")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Ativar tema escuro" }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await page.reload();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expect(
+    page.getByRole("button", { name: "Ativar tema claro" }),
+  ).toBeVisible();
+  await expect(page.getByText("LinkedIn Jobs")).toBeAttached();
+  await expect(page.getByText(/Revisar currículo/)).toBeAttached();
 });
 
 test("quebra nomes longos sem ultrapassar os limites do card", async ({

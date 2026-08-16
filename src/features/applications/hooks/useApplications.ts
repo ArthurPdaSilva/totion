@@ -88,8 +88,7 @@ export function useApplications(repository: ApplicationsRepository) {
     }));
   }
 
-  async function restoreApplications(applications: Application[]) {
-    await repository.replaceAll(applications);
+  function acceptRestoredApplications(applications: Application[]) {
     applicationsRef.current = applications;
     setState({ status: "ready", applications });
   }
@@ -224,7 +223,7 @@ export function useApplications(repository: ApplicationsRepository) {
     editApplication,
     previewApplicationMove,
     removeApplication,
-    restoreApplications,
+    acceptRestoredApplications,
     reload,
   };
 }

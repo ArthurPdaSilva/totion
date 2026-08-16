@@ -16,7 +16,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { type KeyboardEvent, useRef, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useRef, useState } from "react";
 import { notification } from "../../../shared/notifications";
 import {
   APPLICATION_STATUS_LABELS,
@@ -32,6 +32,9 @@ import { ApplicationDragOverlay } from "./ApplicationDragOverlay";
 
 type ApplicationBoardProps = {
   applications: Application[];
+  filteredApplications?: Application[];
+  leadingColumn: ReactNode;
+  trailingColumn: ReactNode;
   isLoading: boolean;
   onRequestEdit: (application: Application, trigger: HTMLButtonElement) => void;
   onRequestDelete: (
@@ -106,7 +109,16 @@ function isSameDropTarget(
 
 const collisionDetectionStrategy: CollisionDetection = (arguments_) => {
   if (arguments_.pointerCoordinates) {
-    return pointerWithin(arguments_);
+    const collisions = pointerWithin(arguments_).filter(
+      (collision) => String(collision.id) !== String(arguments_.active.id),
+    );
+    const applicationCollisions = collisions.filter(
+      (collision) => !String(collision.id).startsWith("application-column:"),
+    );
+
+    return applicationCollisions.length > 0
+      ? applicationCollisions
+      : collisions;
   }
 
   return closestCorners(arguments_);
@@ -114,6 +126,9 @@ const collisionDetectionStrategy: CollisionDetection = (arguments_) => {
 
 export function ApplicationBoard({
   applications,
+  filteredApplications,
+  leadingColumn,
+  trailingColumn,
   isLoading,
   onRequestEdit,
   onRequestDelete,
@@ -122,6 +137,7 @@ export function ApplicationBoard({
   onMoveCommit,
   onMoveCancel,
 }: ApplicationBoardProps) {
+  const isFiltered = filteredApplications !== undefined;
   const [activeId, setActiveId] = useState<string | null>(null);
   const [keyboardActiveId, setKeyboardActiveId] = useState<string | null>(null);
   const [keyboardAnnouncement, setKeyboardAnnouncement] = useState("");
@@ -432,19 +448,27 @@ export function ApplicationBoard({
         aria-busy={isLoading || isCommitting}
         aria-label="Quadro de candidaturas"
       >
+        {leadingColumn}
         {APPLICATION_STATUSES.map((status) => {
           const applicationsInStatus = applications
             .filter((application) => application.status === status)
             .sort((first, second) => first.position - second.position);
+          const displayedApplications = isFiltered
+            ? (filteredApplications ?? []).filter(
+                (application) => application.status === status,
+              )
+            : applicationsInStatus;
 
           return (
             <ApplicationColumn
               key={status}
               status={status}
-              applications={applicationsInStatus}
+              applications={displayedApplications}
+              totalCount={applicationsInStatus.length}
+              isFiltered={isFiltered}
               activeApplicationId={activeId ?? keyboardActiveId}
               isDragActive={Boolean(activeId ?? keyboardActiveId)}
-              isDragDisabled={isCommitting}
+              isDragDisabled={isCommitting || isFiltered}
               keyboardActiveId={keyboardActiveId}
               onKeyboardDragKeyDown={handleKeyboardDragKeyDown}
               onRequestEdit={onRequestEdit}
@@ -452,6 +476,7 @@ export function ApplicationBoard({
             />
           );
         })}
+        {trailingColumn}
       </section>
       <DragOverlay dropAnimation={null} zIndex={60}>
         {activeId && activeApplication ? (

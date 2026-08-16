@@ -4,7 +4,7 @@ Aplicação web para candidatos organizarem vagas e acompanharem cada candidatur
 
 ## Situação Do Projeto
 
-O projeto possui sua primeira fatia vertical implementada. A aplicação exibe o quadro responsivo com os três status, permite cadastrar, visualizar, editar, excluir, mover e reordenar candidaturas e persiste os registros no IndexedDB do navegador.
+O projeto possui sua primeira fatia vertical implementada. A aplicação exibe uma faixa responsiva com portais de vagas, os três status das candidaturas e anotações livres. Candidaturas podem ser movidas e reordenadas; portais e anotações possuem listas estáticas próprias. Todos os dados são persistidos no IndexedDB do navegador.
 
 A aplicação também exporta e restaura backups próprios e versionados do quadro. O CSV histórico permanece no repositório apenas como registro da migração inicial e não é necessário para usar a aplicação.
 
@@ -16,13 +16,15 @@ Centralizar as informações essenciais de cada vaga e permitir que o candidato 
 
 ### Quadro De Candidaturas
 
-O quadro terá três colunas fixas:
+O quadro terá cinco listas visuais fixas, nesta ordem:
 
-1. Aplicada
-2. Em andamento
-3. Encerrada
+1. Portais de Vagas
+2. Aplicada
+3. Em andamento
+4. Encerrada
+5. Anotações
 
-Cada coluna exibirá a quantidade de candidaturas no status correspondente.
+Somente Aplicada, Em andamento e Encerrada representam status e aceitam drag-and-drop. Portais de Vagas e Anotações exibem itens não arrastáveis.
 
 O usuário poderá:
 
@@ -32,6 +34,10 @@ O usuário poderá:
 - Renderizar inicialmente cinco cards por coluna e carregar os próximos lotes conforme a rolagem se aproxima do fim.
 - Abrir o link da vaga em uma nova aba.
 - Usar o quadro em telas desktop e mobile.
+- Cadastrar, editar, abrir e excluir links de portais de vagas.
+- Cadastrar, editar e excluir anotações independentes com conteúdo livre.
+- Buscar sem distinção de caixa ou acentos em todas as listas.
+- Alternar entre tema claro e escuro, persistindo a preferência local.
 
 ### Dados Da Candidatura
 
@@ -64,6 +70,9 @@ Nome, status e data da aplicação são obrigatórios. O link e as anotações s
 - Campos de texto devem ser normalizados nas extremidades, sem remover quebras ou espaços intencionais no conteúdo das anotações.
 - Links externos devem abrir com proteção contra acesso à página de origem.
 - Um card deve continuar editável depois de movido ou reordenado.
+- Portais possuem nome e URL HTTP(S) obrigatórios e nunca são arrastáveis.
+- Anotações independentes possuem conteúdo obrigatório e nunca são arrastáveis.
+- Durante uma busca, o drag fica pausado para não reordenar apenas um subconjunto filtrado.
 
 ## Persistência Inicial
 
@@ -95,6 +104,7 @@ src/
   app/                    # Composição e teste do fluxo principal
   features/
     applications/         # Quadro, cards, formulário, validação e regras
+    resources/            # Portais, anotações, formulários e listas estáticas
   database/
     migrations/           # Versões do banco local
     repositories/         # Leitura e persistência no IndexedDB
@@ -125,6 +135,19 @@ Componentes não devem acessar o IndexedDB diretamente. A persistência ficará 
 
 O schema inicial é criado por migration. Criação, mudança de status e reordenação calculam e persistem as posições afetadas em transações do IndexedDB.
 
+### `jobPortals`
+
+- `id`: identificador único.
+- `name`: nome obrigatório do portal.
+- `url`: URL absoluta HTTP(S).
+- `createdAt` e `updatedAt`: instantes técnicos em UTC.
+
+### `notes`
+
+- `id`: identificador único.
+- `content`: texto livre obrigatório.
+- `createdAt` e `updatedAt`: instantes técnicos em UTC.
+
 ## Direção Visual
 
 - Interface limpa e densa o suficiente para visualizar várias candidaturas.
@@ -135,17 +158,18 @@ O schema inicial é criado por migration. Criação, mudança de status e reorde
 - Colunas longas devem manter apenas lotes progressivos de cards montados para reduzir o custo do drag-and-drop.
 - Estados de foco, hover, arraste, vazio, carregamento e erro devem ser explícitos.
 - A interface e todas as mensagens apresentadas ao usuário serão em português brasileiro.
+- O tema inicia claro e a escolha manual pelo tema escuro é persistida no navegador.
 
 ## Backup Do Quadro
 
-O menu **Backup** exporta um arquivo `.totion` em JSON com versão explícita. O arquivo inclui todos os campos das candidaturas, IDs estáveis e a posição dos cards nas três colunas.
+O menu **Backup** exporta um arquivo `.totion` em JSON com versão explícita. A versão atual inclui candidaturas, portais e anotações, além dos IDs estáveis e da posição dos cards nas três colunas de status. Backups da versão anterior, que continham apenas candidaturas, continuam aceitos.
 
 Ao restaurar um backup, a aplicação:
 
 - Valida formato, versão, campos, URLs, datas, IDs e posições antes de gravar.
-- Exibe a quantidade de cards em Aplicada, Em andamento e Encerrada.
-- Exige confirmação explícita de que o quadro atual será substituído.
-- Substitui todas as candidaturas em uma única transação do IndexedDB.
+- Exibe a quantidade de itens nas cinco listas.
+- Exige confirmação explícita de que todos os dados atuais serão substituídos.
+- Substitui candidaturas, portais e anotações em uma única transação do IndexedDB.
 - Mantém o quadro anterior integralmente se a persistência falhar.
 
 O arquivo CSV com dados reais usado na migração inicial não é carregado pela aplicação, não é necessário para o backup e não é copiado para testes ou documentação.
@@ -180,6 +204,8 @@ Esses itens exigem uma nova decisão de produto antes da implementação.
 - [x] Cobrir os fluxos críticos com testes.
 - [x] Concluir a migração assistida do CSV existente.
 - [x] Implementar exportação e restauração de backup dos dados locais.
+- [x] Implementar portais de vagas e anotações independentes.
+- [x] Implementar busca universal e tema escuro persistido.
 
 ## Como Executar
 
