@@ -242,6 +242,7 @@ describe("App", () => {
     const repository = new MemoryApplicationsRepository();
     repository.applications = [
       createPersistedApplication({
+        appliedAt: "2025-02-03",
         jobUrl: "https://empresa.example/vaga-original",
         notes: "Contato inicial realizado",
       }),
@@ -264,6 +265,8 @@ describe("App", () => {
     expect(screen.getByLabelText("Nome da vaga")).toHaveValue(
       "Desenvolvedor Back-end",
     );
+    expect(screen.getByLabelText("Status")).toHaveValue("applied");
+    expect(screen.getByLabelText("Aplicado em")).toHaveValue("2025-02-03");
     expect(screen.getByLabelText(/Link da vaga/)).toHaveValue(
       "https://empresa.example/vaga-original",
     );
@@ -307,6 +310,7 @@ describe("App", () => {
       id: "application-1",
       name: "Engenheiro de Software",
       status: "closed",
+      appliedAt: "2025-02-03",
       notes: "Processo finalizado",
       createdAt: "2026-08-16T12:00:00.000Z",
     });

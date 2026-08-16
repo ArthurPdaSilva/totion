@@ -164,6 +164,48 @@ describe("DexieApplicationsRepository", () => {
     ]);
   });
 
+  it("serializa movimentos concorrentes para o mesmo destino vazio", async () => {
+    const repository = new DexieApplicationsRepository(createDatabase());
+
+    await repository.create(createApplication("applied-1", "applied"));
+    await repository.create(createApplication("applied-2", "applied"));
+
+    await Promise.all([
+      repository.updateById("applied-1", createUpdate("closed")),
+      repository.updateById("applied-2", createUpdate("closed")),
+    ]);
+
+    const closedApplications = (await repository.list()).filter(
+      (application) => application.status === "closed",
+    );
+    expect(closedApplications).toHaveLength(2);
+    expect(
+      closedApplications.map((application) => application.position),
+    ).toEqual([0, 1]);
+  });
+
+  it("normaliza posições existentes antes de inserir no fim do destino", async () => {
+    const database = createDatabase();
+    const repository = new DexieApplicationsRepository(database);
+    const updatedAt = "2026-08-17T09:00:00.000Z";
+
+    await repository.create(createApplication("applied-1", "applied"));
+    await repository.create(createApplication("progress-1", "in_progress"));
+    await repository.create(createApplication("progress-2", "in_progress"));
+    await database.applications.update("progress-2", { position: 4 });
+
+    await repository.updateById(
+      "applied-1",
+      createUpdate("in_progress", { updatedAt }),
+    );
+
+    await expect(repository.list()).resolves.toMatchObject([
+      { id: "progress-1", status: "in_progress", position: 0 },
+      { id: "progress-2", status: "in_progress", position: 1, updatedAt },
+      { id: "applied-1", status: "in_progress", position: 2, updatedAt },
+    ]);
+  });
+
   it("exclui e normaliza as posições restantes na mesma coluna", async () => {
     const repository = new DexieApplicationsRepository(createDatabase());
     const reorderedAt = "2026-08-17T09:00:00.000Z";
