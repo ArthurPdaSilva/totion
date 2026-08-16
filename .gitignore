@@ -1,0 +1,27 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+.vite/
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Local environment
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+
+# Real user data exported from Notion
+/Candidaturas*_all.csv
