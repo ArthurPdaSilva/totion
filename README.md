@@ -4,9 +4,9 @@ Aplicação web para candidatos organizarem vagas e acompanharem cada candidatur
 
 ## Situação Do Projeto
 
-O projeto possui sua primeira fatia vertical implementada. A aplicação exibe o quadro responsivo com os três status, permite cadastrar candidaturas por um formulário validado, excluir com confirmação e persiste os registros no IndexedDB do navegador.
+O projeto possui sua primeira fatia vertical implementada. A aplicação exibe o quadro responsivo com os três status, permite cadastrar, visualizar, editar e excluir candidaturas e persiste os registros no IndexedDB do navegador.
 
-Edição, drag-and-drop e importação ainda não foram implementados.
+Drag-and-drop e importação ainda não foram implementados.
 
 O repositório contém um CSV exportado do quadro usado atualmente no Notion. Ele servirá como referência de dados e, em uma etapa posterior, como origem para uma funcionalidade de importação.
 
@@ -178,7 +178,7 @@ Esses itens exigem uma nova decisão de produto antes da implementação.
 - [x] Implementar o banco local e a migration inicial.
 - [x] Implementar cadastro e listagem de candidaturas.
 - [x] Implementar exclusão com confirmação.
-- [ ] Implementar edição de candidaturas.
+- [x] Implementar visualização e edição de candidaturas.
 - [ ] Implementar drag-and-drop entre status e reordenação.
 - [ ] Cobrir os fluxos críticos com testes.
 - [ ] Implementar importação assistida do CSV existente.

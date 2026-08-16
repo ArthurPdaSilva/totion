@@ -3,6 +3,7 @@ import type { Application } from "../types/application";
 
 type ApplicationCardProps = {
   application: Application;
+  onRequestEdit: (application: Application, trigger: HTMLButtonElement) => void;
   onRequestDelete: (
     application: Application,
     trigger: HTMLButtonElement,
@@ -11,6 +12,7 @@ type ApplicationCardProps = {
 
 export function ApplicationCard({
   application,
+  onRequestEdit,
   onRequestDelete,
 }: ApplicationCardProps) {
   return (
@@ -19,15 +21,29 @@ export function ApplicationCard({
         <h3 className="pt-1 text-[0.9375rem] leading-6 font-semibold text-ink">
           {application.name}
         </h3>
-        <button
-          type="button"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-danger-soft hover:text-danger hover:opacity-100 focus-visible:opacity-100"
-          aria-label={`Excluir candidatura ${application.name}`}
-          title="Excluir candidatura"
-          onClick={(event) => onRequestDelete(application, event.currentTarget)}
-        >
-          <TrashIcon />
-        </button>
+        <div className="flex shrink-0 items-center">
+          <button
+            id={`edit-application-${application.id}`}
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-info-soft hover:text-info hover:opacity-100 focus-visible:opacity-100"
+            aria-label={`Editar candidatura ${application.name}`}
+            title="Editar candidatura"
+            onClick={(event) => onRequestEdit(application, event.currentTarget)}
+          >
+            <EditIcon />
+          </button>
+          <button
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-danger-soft hover:text-danger hover:opacity-100 focus-visible:opacity-100"
+            aria-label={`Excluir candidatura ${application.name}`}
+            title="Excluir candidatura"
+            onClick={(event) =>
+              onRequestDelete(application, event.currentTarget)
+            }
+          >
+            <TrashIcon />
+          </button>
+        </div>
       </div>
 
       <dl className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-3 text-xs text-muted">
@@ -125,6 +141,26 @@ function TrashIcon() {
     >
       <path
         d="M4.5 7h15M9 7V4.5h6V7m2.5 0-.7 12.5H7.2L6.5 7M10 10.5v5.5M14 10.5v5.5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <path
+        d="m14.5 5.5 4 4M5 19l3.8-.8L19 8a1.4 1.4 0 0 0 0-2l-1-1a1.4 1.4 0 0 0-2 0L5.8 15.2 5 19Z"
         stroke="currentColor"
         strokeWidth="1.7"
         strokeLinecap="round"

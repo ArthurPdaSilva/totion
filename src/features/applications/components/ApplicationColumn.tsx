@@ -5,6 +5,7 @@ import { ApplicationCard } from "./ApplicationCard";
 type ApplicationColumnProps = {
   status: ApplicationStatus;
   applications: Application[];
+  onRequestEdit: (application: Application, trigger: HTMLButtonElement) => void;
   onRequestDelete: (
     application: Application,
     trigger: HTMLButtonElement,
@@ -38,6 +39,7 @@ const STATUS_STYLES = {
 export function ApplicationColumn({
   status,
   applications,
+  onRequestEdit,
   onRequestDelete,
 }: ApplicationColumnProps) {
   const label = APPLICATION_STATUS_LABELS[status];
@@ -78,6 +80,7 @@ export function ApplicationColumn({
             <ApplicationCard
               key={application.id}
               application={application}
+              onRequestEdit={onRequestEdit}
               onRequestDelete={onRequestDelete}
             />
           ))

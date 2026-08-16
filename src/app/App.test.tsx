@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import type {
   ApplicationsRepository,
+  ApplicationUpdate,
   ApplicationWithoutPosition,
 } from "../database/repositories/applicationsRepository";
 import type { Application } from "../features/applications/types/application";
@@ -17,6 +18,7 @@ import { App } from "./App";
 class MemoryApplicationsRepository implements ApplicationsRepository {
   applications: Application[] = [];
   shouldFailCreation = false;
+  shouldFailUpdate = false;
   shouldFailDeletion = false;
 
   async list() {
@@ -35,6 +37,36 @@ class MemoryApplicationsRepository implements ApplicationsRepository {
     this.applications.push(persistedApplication);
 
     return persistedApplication;
+  }
+
+  async updateById(id: string, update: ApplicationUpdate) {
+    if (this.shouldFailUpdate) {
+      throw new Error("Falha sintética");
+    }
+
+    const currentApplication = this.applications.find(
+      (application) => application.id === id,
+    );
+
+    if (!currentApplication) {
+      throw new Error("Candidatura não encontrada");
+    }
+
+    const updatedApplication: Application = {
+      ...currentApplication,
+      ...update,
+      position:
+        currentApplication.status === update.status
+          ? currentApplication.position
+          : this.applications.filter(
+              (application) => application.status === update.status,
+            ).length,
+    };
+    this.applications = this.applications.map((application) =>
+      application.id === id ? updatedApplication : application,
+    );
+
+    return [updatedApplication];
   }
 
   async deleteById(id: string, reorderedAt: string) {
@@ -203,6 +235,109 @@ describe("App", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(nameInput).toHaveValue("Analista de Sistemas");
     expect(repository.applications).toHaveLength(0);
+  });
+
+  it("exibe os detalhes e edita uma candidatura", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    repository.applications = [
+      createPersistedApplication({
+        jobUrl: "https://empresa.example/vaga-original",
+        notes: "Contato inicial realizado",
+      }),
+    ];
+    render(<App repository={repository} />);
+
+    const appliedColumn = await screen.findByRole("region", {
+      name: "Aplicada",
+    });
+    const closedColumn = screen.getByRole("region", { name: "Encerrada" });
+    await user.click(
+      within(appliedColumn).getByRole("button", {
+        name: "Editar candidatura Desenvolvedor Back-end",
+      }),
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "Editar candidatura" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Nome da vaga")).toHaveValue(
+      "Desenvolvedor Back-end",
+    );
+    expect(screen.getByLabelText(/Link da vaga/)).toHaveValue(
+      "https://empresa.example/vaga-original",
+    );
+    expect(screen.getByLabelText(/Anotações/)).toHaveValue(
+      "Contato inicial realizado",
+    );
+
+    await user.clear(screen.getByLabelText("Nome da vaga"));
+    await user.type(
+      screen.getByLabelText("Nome da vaga"),
+      "Engenheiro de Software",
+    );
+    await user.selectOptions(screen.getByLabelText("Status"), "closed");
+    await user.clear(screen.getByLabelText(/Anotações/));
+    await user.type(screen.getByLabelText(/Anotações/), "Processo finalizado");
+    await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    expect(
+      await screen.findByText("Alterações salvas no quadro."),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(
+      within(appliedColumn).queryByRole("article"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(closedColumn).getByText("Engenheiro de Software"),
+    ).toBeInTheDocument();
+    expect(
+      within(closedColumn).getByLabelText("1 candidatura"),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        within(closedColumn).getByRole("button", {
+          name: "Editar candidatura Engenheiro de Software",
+        }),
+      ).toHaveFocus(),
+    );
+    expect(repository.applications[0]).toMatchObject({
+      id: "application-1",
+      name: "Engenheiro de Software",
+      status: "closed",
+      notes: "Processo finalizado",
+      createdAt: "2026-08-16T12:00:00.000Z",
+    });
+    expect(repository.applications[0]?.updatedAt).not.toBe(
+      "2026-08-16T12:00:00.000Z",
+    );
+  });
+
+  it("mantém os dados editados quando a atualização falha", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    repository.applications = [createPersistedApplication()];
+    repository.shouldFailUpdate = true;
+    render(<App repository={repository} />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Editar candidatura Desenvolvedor Back-end",
+      }),
+    );
+    const nameInput = screen.getByLabelText("Nome da vaga");
+    await user.clear(nameInput);
+    await user.type(nameInput, "Desenvolvedor Full Stack");
+    await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    expect(
+      await screen.findByText(/Não foi possível atualizar a candidatura/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(nameInput).toHaveValue("Desenvolvedor Full Stack");
+    expect(repository.applications[0]?.name).toBe("Desenvolvedor Back-end");
   });
 
   it("solicita confirmação e exclui uma candidatura definitivamente", async () => {

@@ -3,11 +3,24 @@ import type { Application } from "../../features/applications/types/application"
 import type { TotionDatabase } from "../database";
 
 export type ApplicationWithoutPosition = Omit<Application, "position">;
+export type ApplicationUpdate = Pick<
+  Application,
+  "name" | "status" | "appliedAt" | "jobUrl" | "notes" | "updatedAt"
+>;
 
 export interface ApplicationsRepository {
   list(): Promise<Application[]>;
   create(application: ApplicationWithoutPosition): Promise<Application>;
+  updateById(id: string, update: ApplicationUpdate): Promise<Application[]>;
   deleteById(id: string, reorderedAt: string): Promise<Application[]>;
+}
+
+function normalizePositions(applications: Application[], updatedAt: string) {
+  return applications.flatMap((application, position) =>
+    application.position === position
+      ? []
+      : [{ ...application, position, updatedAt }],
+  );
 }
 
 export class DexieApplicationsRepository implements ApplicationsRepository {
@@ -52,6 +65,61 @@ export class DexieApplicationsRepository implements ApplicationsRepository {
     );
   }
 
+  async updateById(id: string, update: ApplicationUpdate) {
+    return this.database.transaction(
+      "rw",
+      this.database.applications,
+      async () => {
+        const currentApplication = await this.database.applications.get(id);
+
+        if (!currentApplication) {
+          throw new Error("Candidatura não encontrada");
+        }
+
+        if (currentApplication.status === update.status) {
+          const updatedApplication = {
+            ...currentApplication,
+            ...update,
+          };
+          await this.database.applications.put(updatedApplication);
+          return [updatedApplication];
+        }
+
+        const sourceApplications = (
+          await this.database.applications
+            .where("status")
+            .equals(currentApplication.status)
+            .sortBy("position")
+        ).filter((application) => application.id !== id);
+        const targetApplications = await this.database.applications
+          .where("status")
+          .equals(update.status)
+          .sortBy("position");
+        const normalizedSource = normalizePositions(
+          sourceApplications,
+          update.updatedAt,
+        );
+        const normalizedTarget = normalizePositions(
+          targetApplications,
+          update.updatedAt,
+        );
+        const updatedApplication: Application = {
+          ...currentApplication,
+          ...update,
+          position: targetApplications.length,
+        };
+        const changedApplications = [
+          ...normalizedSource,
+          ...normalizedTarget,
+          updatedApplication,
+        ];
+
+        await this.database.applications.bulkPut(changedApplications);
+        return changedApplications;
+      },
+    );
+  }
+
   async deleteById(id: string, reorderedAt: string) {
     return this.database.transaction(
       "rw",
@@ -69,17 +137,9 @@ export class DexieApplicationsRepository implements ApplicationsRepository {
           .where("status")
           .equals(application.status)
           .sortBy("position");
-        const applicationsToReorder = remainingApplications.flatMap(
-          (remainingApplication, position) =>
-            remainingApplication.position === position
-              ? []
-              : [
-                  {
-                    ...remainingApplication,
-                    position,
-                    updatedAt: reorderedAt,
-                  },
-                ],
+        const applicationsToReorder = normalizePositions(
+          remainingApplications,
+          reorderedAt,
         );
 
         if (applicationsToReorder.length > 0) {

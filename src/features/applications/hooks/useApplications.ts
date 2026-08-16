@@ -3,6 +3,7 @@ import type { ApplicationsRepository } from "../../../database/repositories/appl
 import type { NewApplication } from "../schemas/applicationSchema";
 import { createApplication } from "../services/createApplication";
 import { deleteApplication } from "../services/deleteApplication";
+import { updateApplication } from "../services/updateApplication";
 import type { Application } from "../types/application";
 
 type ApplicationsState =
@@ -75,6 +76,21 @@ export function useApplications(repository: ApplicationsRepository) {
     }));
   }
 
+  async function editApplication(id: string, input: NewApplication) {
+    const changedApplications = await updateApplication(repository, id, input);
+    const changedApplicationsById = new Map(
+      changedApplications.map((application) => [application.id, application]),
+    );
+
+    setState((currentState) => ({
+      status: "ready",
+      applications: currentState.applications.map(
+        (application) =>
+          changedApplicationsById.get(application.id) ?? application,
+      ),
+    }));
+  }
+
   function reload() {
     setReloadKey((currentKey) => currentKey + 1);
   }
@@ -82,6 +98,7 @@ export function useApplications(repository: ApplicationsRepository) {
   return {
     ...state,
     addApplication,
+    editApplication,
     removeApplication,
     reload,
   };

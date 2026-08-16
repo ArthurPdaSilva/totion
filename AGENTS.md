@@ -6,7 +6,7 @@ Totion é uma aplicação web local-first para candidatos acompanharem vagas em 
 
 Toda interface, mensagem de validação e texto apresentado ao usuário deve estar em português brasileiro. Nomes técnicos, identificadores e código devem estar em inglês.
 
-A primeira fatia vertical de criação, listagem e exclusão está implementada. Não trate edição, drag-and-drop ou importação como funcionalidades existentes.
+A primeira fatia vertical de criação, listagem, edição e exclusão está implementada. Não trate drag-and-drop ou importação como funcionalidades existentes.
 
 ## Fonte De Verdade
 
@@ -56,6 +56,7 @@ Não adicionar novos status, status personalizados ou transições especiais sem
 - Cada candidatura pertence a um único status e ocupa uma posição nesse status.
 - Mover entre colunas altera status e posição em uma única transação.
 - Reordenar na mesma coluna altera a posição sem mudar o status.
+- Alterar o status pelo formulário move o card para o fim da coluna de destino e normaliza a origem na mesma transação.
 - Não use o índice renderizado como identidade do card.
 - O estado visual pode ser otimista, mas uma falha de persistência deve restaurar a ordem anterior e produzir uma mensagem acessível.
 - Sensores de mouse, toque e teclado devem ser configurados explicitamente.

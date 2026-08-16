@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TotionDatabase } from "../database";
 import {
+  type ApplicationUpdate,
   type ApplicationWithoutPosition,
   DexieApplicationsRepository,
 } from "./applicationsRepository";
@@ -26,6 +27,21 @@ function createApplication(
     notes: null,
     createdAt: "2026-08-16T12:00:00.000Z",
     updatedAt: "2026-08-16T12:00:00.000Z",
+  };
+}
+
+function createUpdate(
+  status: ApplicationUpdate["status"],
+  overrides: Partial<ApplicationUpdate> = {},
+): ApplicationUpdate {
+  return {
+    name: "Vaga atualizada",
+    status,
+    appliedAt: "2026-08-17",
+    jobUrl: "https://empresa.example/vaga",
+    notes: "Dados atualizados",
+    updatedAt: "2026-08-17T09:00:00.000Z",
+    ...overrides,
   };
 }
 
@@ -79,6 +95,72 @@ describe("DexieApplicationsRepository", () => {
 
     await expect(reopenedRepository.list()).resolves.toMatchObject([
       { id: "persisted", status: "closed", position: 0 },
+    ]);
+  });
+
+  it("atualiza os dados sem alterar identidade, criação ou posição", async () => {
+    const repository = new DexieApplicationsRepository(createDatabase());
+    await repository.create(createApplication("applied-1", "applied"));
+
+    await repository.updateById(
+      "applied-1",
+      createUpdate("applied", { name: "Pessoa Desenvolvedora React" }),
+    );
+
+    await expect(repository.list()).resolves.toMatchObject([
+      {
+        id: "applied-1",
+        name: "Pessoa Desenvolvedora React",
+        status: "applied",
+        position: 0,
+        createdAt: "2026-08-16T12:00:00.000Z",
+        updatedAt: "2026-08-17T09:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("move para o fim do novo status e normaliza a coluna de origem", async () => {
+    const repository = new DexieApplicationsRepository(createDatabase());
+    const updatedAt = "2026-08-17T09:00:00.000Z";
+
+    await repository.create(createApplication("applied-1", "applied"));
+    await repository.create(createApplication("applied-2", "applied"));
+    await repository.create(createApplication("applied-3", "applied"));
+    await repository.create(createApplication("progress-1", "in_progress"));
+
+    await repository.updateById(
+      "applied-2",
+      createUpdate("in_progress", { updatedAt }),
+    );
+
+    await expect(repository.list()).resolves.toMatchObject([
+      { id: "applied-1", status: "applied", position: 0 },
+      { id: "applied-3", status: "applied", position: 1, updatedAt },
+      { id: "progress-1", status: "in_progress", position: 0 },
+      {
+        id: "applied-2",
+        status: "in_progress",
+        position: 1,
+        updatedAt,
+      },
+    ]);
+  });
+
+  it("restaura a edição quando a mudança de status falha", async () => {
+    const database = createDatabase();
+    const repository = new DexieApplicationsRepository(database);
+    await repository.create(createApplication("applied-1", "applied"));
+    await repository.create(createApplication("closed-1", "closed"));
+    vi.spyOn(database.applications, "bulkPut").mockRejectedValueOnce(
+      new Error("Falha sintética na movimentação"),
+    );
+
+    await expect(
+      repository.updateById("applied-1", createUpdate("closed")),
+    ).rejects.toThrow("Falha sintética na movimentação");
+    await expect(repository.list()).resolves.toMatchObject([
+      { id: "applied-1", status: "applied", position: 0 },
+      { id: "closed-1", status: "closed", position: 0 },
     ]);
   });
 

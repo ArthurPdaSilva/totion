@@ -12,21 +12,25 @@ import {
   applicationSchema,
   type NewApplication,
 } from "../schemas/applicationSchema";
+import type { Application } from "../types/application";
 
 type ApplicationFormDialogProps = {
+  application?: Application;
   onClose: () => void;
-  onCreate: (application: NewApplication) => Promise<unknown>;
+  onSubmit: (application: NewApplication) => Promise<unknown>;
 };
 
 const FIELD_CLASS_NAME =
   "mt-2 min-h-11 w-full rounded-button border border-line-strong bg-card px-3.5 py-2.5 text-sm text-ink shadow-sm transition placeholder:text-subtle hover:border-muted focus:border-focus focus:outline-none focus:ring-3 focus:ring-focus/15 aria-invalid:border-danger aria-invalid:ring-danger/10";
 
 export function ApplicationFormDialog({
+  application,
   onClose,
-  onCreate,
+  onSubmit,
 }: ApplicationFormDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const isEditing = application !== undefined;
   const {
     register,
     handleSubmit,
@@ -34,13 +38,21 @@ export function ApplicationFormDialog({
     formState: { errors, isSubmitting },
   } = useForm<ApplicationFormValues, unknown, NewApplication>({
     resolver: zodResolver(applicationSchema),
-    defaultValues: {
-      name: "",
-      status: "applied",
-      appliedAt: getCurrentCivilDate(),
-      jobUrl: "",
-      notes: "",
-    },
+    defaultValues: application
+      ? {
+          name: application.name,
+          status: application.status,
+          appliedAt: application.appliedAt,
+          jobUrl: application.jobUrl ?? "",
+          notes: application.notes ?? "",
+        }
+      : {
+          name: "",
+          status: "applied",
+          appliedAt: getCurrentCivilDate(),
+          jobUrl: "",
+          notes: "",
+        },
   });
 
   useEffect(() => {
@@ -55,13 +67,17 @@ export function ApplicationFormDialog({
     setSubmissionError(null);
 
     try {
-      await onCreate(application);
+      await onSubmit(application);
       reset();
       onClose();
-      notification.success("Candidatura adicionada ao quadro.");
+      notification.success(
+        isEditing
+          ? "Alterações salvas no quadro."
+          : "Candidatura adicionada ao quadro.",
+      );
     } catch {
       setSubmissionError(
-        "Não foi possível salvar a candidatura. Seus dados foram mantidos para você tentar novamente.",
+        `Não foi possível ${isEditing ? "atualizar" : "salvar"} a candidatura. Seus dados foram mantidos para você tentar novamente.`,
       );
     }
   }
@@ -91,17 +107,18 @@ export function ApplicationFormDialog({
         <div className="flex items-start justify-between gap-5">
           <div>
             <p className="mb-1.5 text-xs font-bold tracking-[0.16em] text-brand uppercase">
-              Nova oportunidade
+              {isEditing ? "Detalhes da candidatura" : "Nova oportunidade"}
             </p>
             <h2
               id="application-form-title"
               className="font-display text-2xl font-bold tracking-[-0.025em] sm:text-3xl"
             >
-              Adicionar candidatura
+              {isEditing ? "Editar candidatura" : "Adicionar candidatura"}
             </h2>
             <p className="mt-2 max-w-lg text-sm leading-6 text-muted">
-              Registre os dados principais agora. Você poderá acompanhar esta
-              vaga pelo quadro.
+              {isEditing
+                ? "Revise os dados, consulte suas anotações e atualize o andamento da vaga."
+                : "Registre os dados principais agora. Você poderá acompanhar esta vaga pelo quadro."}
             </p>
           </div>
           <button
@@ -274,7 +291,11 @@ export function ApplicationFormDialog({
             className="min-h-11 rounded-button bg-brand px-5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-hover disabled:opacity-60"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Salvando..." : "Salvar candidatura"}
+            {isSubmitting
+              ? "Salvando..."
+              : isEditing
+                ? "Salvar alterações"
+                : "Salvar candidatura"}
           </button>
         </div>
       </form>

@@ -5,6 +5,7 @@ import { ApplicationColumn } from "./ApplicationColumn";
 type ApplicationBoardProps = {
   applications: Application[];
   isLoading: boolean;
+  onRequestEdit: (application: Application, trigger: HTMLButtonElement) => void;
   onRequestDelete: (
     application: Application,
     trigger: HTMLButtonElement,
@@ -14,6 +15,7 @@ type ApplicationBoardProps = {
 export function ApplicationBoard({
   applications,
   isLoading,
+  onRequestEdit,
   onRequestDelete,
 }: ApplicationBoardProps) {
   return (
@@ -31,6 +33,7 @@ export function ApplicationBoard({
             key={status}
             status={status}
             applications={applicationsInStatus}
+            onRequestEdit={onRequestEdit}
             onRequestDelete={onRequestDelete}
           />
         );

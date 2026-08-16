@@ -20,16 +20,51 @@ type AppProps = {
 
 export function App({ repository = defaultRepository }: AppProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [applicationToEdit, setApplicationToEdit] =
+    useState<Application | null>(null);
   const [applicationToDelete, setApplicationToDelete] =
     useState<Application | null>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
+  const editButtonRef = useRef<HTMLButtonElement | null>(null);
   const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
-  const { applications, status, addApplication, removeApplication, reload } =
-    useApplications(repository);
+  const {
+    applications,
+    status,
+    addApplication,
+    editApplication,
+    removeApplication,
+    reload,
+  } = useApplications(repository);
 
   function closeForm() {
     setIsFormOpen(false);
     queueMicrotask(() => createButtonRef.current?.focus());
+  }
+
+  function requestApplicationEdit(
+    application: Application,
+    trigger: HTMLButtonElement,
+  ) {
+    editButtonRef.current = trigger;
+    setApplicationToEdit(application);
+  }
+
+  function closeApplicationEdit() {
+    const applicationId = applicationToEdit?.id;
+    setApplicationToEdit(null);
+    setTimeout(() => {
+      const currentEditButton = applicationId
+        ? document.getElementById(`edit-application-${applicationId}`)
+        : null;
+
+      if (currentEditButton instanceof HTMLButtonElement) {
+        currentEditButton.focus();
+      } else if (editButtonRef.current?.isConnected) {
+        editButtonRef.current.focus();
+      } else {
+        createButtonRef.current?.focus();
+      }
+    }, 0);
   }
 
   function requestApplicationDeletion(
@@ -158,12 +193,21 @@ export function App({ repository = defaultRepository }: AppProps) {
         <ApplicationBoard
           applications={applications}
           isLoading={status === "loading"}
+          onRequestEdit={requestApplicationEdit}
           onRequestDelete={requestApplicationDeletion}
         />
       </main>
 
       {isFormOpen ? (
-        <ApplicationFormDialog onClose={closeForm} onCreate={addApplication} />
+        <ApplicationFormDialog onClose={closeForm} onSubmit={addApplication} />
+      ) : null}
+
+      {applicationToEdit ? (
+        <ApplicationFormDialog
+          application={applicationToEdit}
+          onClose={closeApplicationEdit}
+          onSubmit={(input) => editApplication(applicationToEdit.id, input)}
+        />
       ) : null}
 
       {applicationToDelete ? (
