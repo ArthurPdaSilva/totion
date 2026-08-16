@@ -40,6 +40,16 @@ class MemoryApplicationsRepository implements ApplicationsRepository {
     return persistedApplication;
   }
 
+  async createMany(applications: ApplicationWithoutPosition[]) {
+    const importedApplications: Application[] = [];
+
+    for (const application of applications) {
+      importedApplications.push(await this.create(application));
+    }
+
+    return importedApplications;
+  }
+
   async updateById(id: string, update: ApplicationUpdate) {
     if (this.shouldFailUpdate) {
       throw new Error("Falha sintética");
@@ -271,6 +281,56 @@ describe("App", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(nameInput).toHaveValue("Analista de Sistemas");
     expect(repository.applications).toHaveLength(0);
+  });
+
+  it("revisa e importa candidaturas de um CSV", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    render(<App repository={repository} />);
+
+    await screen.findByRole("region", { name: "Aplicada" });
+    const importButton = screen.getByRole("button", { name: "Importar CSV" });
+    await user.click(importButton);
+    const csvFile = new File(
+      [
+        "Name,Aplicado em,Link,Status\n",
+        'Pessoa Front-end,"August 16, 2026",https://empresa.example/front,Aplicada\n',
+        'Pessoa de Produto,"August 17, 2026",,Entrevista\n',
+        "Linha inválida,,link inválido,Aplicada",
+      ],
+      "candidaturas-sinteticas.csv",
+      { type: "text/csv" },
+    );
+    await user.upload(await screen.findByLabelText("Arquivo CSV"), csvFile);
+
+    expect(await screen.findByText("Resumo da prévia")).toBeInTheDocument();
+    expect(screen.getByText("3", { selector: "dd" })).toBeInTheDocument();
+    await user.selectOptions(
+      screen.getByLabelText(/Entrevista/),
+      "in_progress",
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Ignorar linha" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Importar 2 candidaturas" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(
+      within(screen.getByRole("region", { name: "Aplicada" })).getByText(
+        "Pessoa Front-end",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Em andamento" })).getByText(
+        "Pessoa de Produto",
+      ),
+    ).toBeInTheDocument();
+    expect(repository.applications).toHaveLength(2);
+    expect(importButton).toHaveFocus();
   });
 
   it("exibe os detalhes e edita uma candidatura", async () => {

@@ -3,6 +3,7 @@ import type { ApplicationsRepository } from "../../../database/repositories/appl
 import type { NewApplication } from "../schemas/applicationSchema";
 import { createApplication } from "../services/createApplication";
 import { deleteApplication } from "../services/deleteApplication";
+import { importApplications } from "../services/importApplications";
 import { moveApplication } from "../services/moveApplication";
 import {
   type ApplicationDropTarget,
@@ -86,6 +87,17 @@ export function useApplications(repository: ApplicationsRepository) {
             reorderedApplicationsById.get(application.id) ?? application,
         ),
     }));
+  }
+
+  async function addImportedApplications(inputs: NewApplication[]) {
+    const importedApplications = await importApplications(repository, inputs);
+
+    setState((currentState) => ({
+      status: "ready",
+      applications: [...currentState.applications, ...importedApplications],
+    }));
+
+    return importedApplications;
   }
 
   async function editApplication(id: string, input: NewApplication) {
@@ -212,6 +224,7 @@ export function useApplications(repository: ApplicationsRepository) {
   return {
     ...state,
     addApplication,
+    addImportedApplications,
     beginApplicationMove,
     cancelApplicationMove,
     commitApplicationMove,

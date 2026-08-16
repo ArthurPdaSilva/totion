@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import brandIconUrl from "../../assets/favicon.svg";
 import { database } from "../database/database";
 import {
@@ -13,6 +13,11 @@ import type { Application } from "../features/applications/types/application";
 import { Notifications } from "../shared/notifications";
 
 const defaultRepository = new DexieApplicationsRepository(database);
+const ImportApplicationsDialog = lazy(() =>
+  import("../features/applications/components/ImportApplicationsDialog").then(
+    (module) => ({ default: module.ImportApplicationsDialog }),
+  ),
+);
 
 type AppProps = {
   repository?: ApplicationsRepository;
@@ -20,17 +25,20 @@ type AppProps = {
 
 export function App({ repository = defaultRepository }: AppProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [applicationToEdit, setApplicationToEdit] =
     useState<Application | null>(null);
   const [applicationToDelete, setApplicationToDelete] =
     useState<Application | null>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
+  const importButtonRef = useRef<HTMLButtonElement>(null);
   const editButtonRef = useRef<HTMLButtonElement | null>(null);
   const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
   const {
     applications,
     status,
     addApplication,
+    addImportedApplications,
     beginApplicationMove,
     cancelApplicationMove,
     commitApplicationMove,
@@ -43,6 +51,11 @@ export function App({ repository = defaultRepository }: AppProps) {
   function closeForm() {
     setIsFormOpen(false);
     queueMicrotask(() => createButtonRef.current?.focus());
+  }
+
+  function closeImport() {
+    setIsImportOpen(false);
+    queueMicrotask(() => importButtonRef.current?.focus());
   }
 
   function requestApplicationEdit(
@@ -127,17 +140,29 @@ export function App({ repository = defaultRepository }: AppProps) {
             </span>
           </a>
 
-          <button
-            ref={createButtonRef}
-            type="button"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-button bg-brand px-4 text-sm font-bold text-white shadow-card transition duration-200 ease-standard hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-card-hover motion-reduce:transform-none sm:px-5"
-            onClick={() => setIsFormOpen(true)}
-          >
-            <span className="text-lg leading-none" aria-hidden="true">
-              +
-            </span>
-            Nova candidatura
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              ref={importButtonRef}
+              type="button"
+              className="inline-flex min-h-11 items-center justify-center rounded-button border border-line-strong bg-card px-3 text-sm font-bold text-ink transition hover:bg-canvas sm:px-4"
+              onClick={() => setIsImportOpen(true)}
+            >
+              Importar CSV
+            </button>
+            <button
+              ref={createButtonRef}
+              type="button"
+              aria-label="Nova candidatura"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-button bg-brand px-3 text-sm font-bold text-white shadow-card transition duration-200 ease-standard hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-card-hover motion-reduce:transform-none sm:px-5"
+              onClick={() => setIsFormOpen(true)}
+            >
+              <span className="text-lg leading-none" aria-hidden="true">
+                +
+              </span>
+              <span className="hidden sm:inline">Nova candidatura</span>
+              <span className="sm:hidden">Nova</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -208,6 +233,22 @@ export function App({ repository = defaultRepository }: AppProps) {
 
       {isFormOpen ? (
         <ApplicationFormDialog onClose={closeForm} onSubmit={addApplication} />
+      ) : null}
+
+      {isImportOpen ? (
+        <Suspense
+          fallback={
+            <p className="sr-only" role="status">
+              Carregando importação...
+            </p>
+          }
+        >
+          <ImportApplicationsDialog
+            applications={applications}
+            onClose={closeImport}
+            onImport={addImportedApplications}
+          />
+        </Suspense>
       ) : null}
 
       {applicationToEdit ? (

@@ -12,7 +12,7 @@ export function ApplicationDragOverlay({
       <p className="mb-2 text-[0.6875rem] font-bold tracking-[0.12em] text-brand uppercase">
         {APPLICATION_STATUS_LABELS[application.status]}
       </p>
-      <h3 className="text-[0.9375rem] leading-6 font-semibold text-ink">
+      <h3 className="break-words text-[0.9375rem] leading-6 font-semibold text-ink">
         {application.name}
       </h3>
       <p className="mt-4 border-t border-line pt-3 text-xs text-muted">

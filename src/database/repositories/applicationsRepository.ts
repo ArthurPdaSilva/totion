@@ -1,4 +1,5 @@
 import { APPLICATION_STATUSES } from "../../features/applications/constants/applicationStatuses";
+import { getApplicationIdentity } from "../../features/applications/services/applicationIdentity";
 import type {
   Application,
   ApplicationStatus,
@@ -14,6 +15,9 @@ export type ApplicationUpdate = Pick<
 export interface ApplicationsRepository {
   list(): Promise<Application[]>;
   create(application: ApplicationWithoutPosition): Promise<Application>;
+  createMany(
+    applications: ApplicationWithoutPosition[],
+  ): Promise<Application[]>;
   updateById(id: string, update: ApplicationUpdate): Promise<Application[]>;
   moveById(
     id: string,
@@ -103,6 +107,51 @@ export class DexieApplicationsRepository implements ApplicationsRepository {
         await this.database.applications.add(persistedApplication);
 
         return persistedApplication;
+      },
+    );
+  }
+
+  async createMany(applications: ApplicationWithoutPosition[]) {
+    return this.database.transaction(
+      "rw",
+      this.database.applications,
+      async () => {
+        const existingApplications = await this.database.applications.toArray();
+        const identities = new Set(
+          existingApplications.map(getApplicationIdentity),
+        );
+        const nextPositions = new Map<ApplicationStatus, number>(
+          APPLICATION_STATUSES.map((status) => [
+            status,
+            existingApplications.reduce(
+              (nextPosition, application) =>
+                application.status === status
+                  ? Math.max(nextPosition, application.position + 1)
+                  : nextPosition,
+              0,
+            ),
+          ]),
+        );
+        const importedApplications: Application[] = [];
+
+        for (const application of applications) {
+          const identity = getApplicationIdentity(application);
+
+          if (identities.has(identity)) {
+            continue;
+          }
+
+          const position = nextPositions.get(application.status) ?? 0;
+          importedApplications.push({ ...application, position });
+          nextPositions.set(application.status, position + 1);
+          identities.add(identity);
+        }
+
+        if (importedApplications.length > 0) {
+          await this.database.applications.bulkAdd(importedApplications);
+        }
+
+        return importedApplications;
       },
     );
   }

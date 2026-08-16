@@ -9,6 +9,10 @@ async function createApplication(
   await page.getByLabel("Aplicado em").fill("2026-08-16");
   await page.getByRole("button", { name: "Salvar candidatura" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
+  await page
+    .getByRole("button", { name: "Fechar notificação" })
+    .first()
+    .click();
 }
 
 test("move uma candidatura para uma coluna vazia e persiste após recarregar", async ({
@@ -250,4 +254,59 @@ test("mantém o quadro navegável no desktop e no mobile", async ({
     ).toBeInViewport();
     await expect(closedColumn).toBeInViewport();
   }
+});
+
+test("importa candidaturas de um CSV após revisar a prévia", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Importar CSV" }).click();
+  await page
+    .getByLabel("Arquivo CSV")
+    .setInputFiles("tests/fixtures/applications-import.csv");
+
+  await expect(page.getByText("Resumo da prévia")).toBeVisible();
+  await page.getByLabel(/Entrevista/).selectOption("in_progress");
+  await page.getByRole("button", { name: "Importar 2 candidaturas" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+
+  await expect(
+    page
+      .getByRole("region", { name: "Aplicada" })
+      .getByText("Pessoa Engenheira de Plataforma"),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Em andamento" })
+      .getByText("Pessoa Analista de Produto"),
+  ).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByText("Pessoa Engenheira de Plataforma")).toBeVisible();
+  await expect(page.getByText("Pessoa Analista de Produto")).toBeVisible();
+});
+
+test("quebra nomes longos sem ultrapassar os limites do card", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const longName = `Frontend-${"endereco-sem-espacos-".repeat(12)}`;
+  await createApplication(page, longName);
+
+  const card = page
+    .getByRole("region", { name: "Aplicada" })
+    .getByRole("article");
+  const dimensions = await card.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
 });

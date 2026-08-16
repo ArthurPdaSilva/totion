@@ -21,7 +21,7 @@ export function ApplicationCard({
   return (
     <article className="group rounded-card border border-line bg-card p-4 shadow-card transition duration-200 ease-standard hover:-translate-y-0.5 hover:border-line-strong hover:shadow-card-hover motion-reduce:transform-none">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="pt-1 text-[0.9375rem] leading-6 font-semibold text-ink">
+        <h3 className="min-w-0 flex-1 break-words pt-1 text-[0.9375rem] leading-6 font-semibold text-ink">
           {application.name}
         </h3>
         <div className="flex shrink-0 items-center">

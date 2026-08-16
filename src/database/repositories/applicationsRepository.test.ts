@@ -98,6 +98,39 @@ describe("DexieApplicationsRepository", () => {
     ]);
   });
 
+  it("importa em lote de forma transacional e ignora duplicatas", async () => {
+    const database = createDatabase();
+    const repository = new DexieApplicationsRepository(database);
+    const first = createApplication("imported-1", "applied");
+    const duplicate = {
+      ...createApplication("imported-duplicate", "closed"),
+      name: first.name,
+      appliedAt: first.appliedAt,
+      jobUrl: first.jobUrl,
+    };
+
+    await expect(
+      repository.createMany([first, duplicate]),
+    ).resolves.toMatchObject([
+      { id: "imported-1", status: "applied", position: 0 },
+    ]);
+    await expect(repository.createMany([first])).resolves.toEqual([]);
+    await expect(repository.list()).resolves.toMatchObject([
+      { id: "imported-1", status: "applied", position: 0 },
+    ]);
+
+    vi.spyOn(database.applications, "bulkAdd").mockRejectedValueOnce(
+      new Error("Falha sintética na importação"),
+    );
+    await expect(
+      repository.createMany([
+        createApplication("imported-2", "applied"),
+        createApplication("imported-3", "closed"),
+      ]),
+    ).rejects.toThrow("Falha sintética na importação");
+    await expect(repository.list()).resolves.toHaveLength(1);
+  });
+
   it("atualiza os dados sem alterar identidade, criação ou posição", async () => {
     const repository = new DexieApplicationsRepository(createDatabase());
     await repository.create(createApplication("applied-1", "applied"));

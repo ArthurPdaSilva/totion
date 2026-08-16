@@ -81,6 +81,7 @@ Essa decisão permite validar a experiência principal antes de assumir custos d
 - Dexie para acesso tipado ao IndexedDB e migrations.
 - React Hook Form para formulários.
 - Zod para validação e contratos.
+- Papa Parse para leitura segura dos arquivos CSV.
 - Sonner encapsulado para notificações transitórias.
 - Vitest e React Testing Library para testes unitários e de componentes.
 - Playwright para os fluxos críticos no navegador em desktop e mobile.
@@ -138,16 +139,18 @@ O schema inicial é criado por migration. Criação, mudança de status e reorde
 
 ## Importação Do Quadro Atual
 
-O arquivo `Candidaturas d53846254da9471c88ab8f81817a9505_all.csv` não deve ser carregado automaticamente nem usado em testes como fixture integral, pois contém dados reais.
+O arquivo `Candidaturas d53846254da9471c88ab8f81817a9505_all.csv` não é carregado automaticamente nem usado em testes como fixture integral, pois contém dados reais.
 
-A importação será implementada após o CRUD e o quadro estarem estáveis. Ela deverá:
+A importação assistida permite selecionar esse arquivo pela interface e:
 
 - Exibir uma prévia antes de gravar.
 - Mapear `Name`, `Aplicado em`, `Link` e `Status` para o modelo atual.
 - Converter datas em inglês para `YYYY-MM-DD`.
 - Permitir ao usuário corrigir ou ignorar linhas inválidas.
-- Mapear apenas os três status suportados ou solicitar uma decisão para valores desconhecidos.
-- Evitar duplicação acidental ao repetir a importação.
+- Exigir uma decisão para valores de status desconhecidos, sem adivinhar o destino.
+- Ignorar os valores vazio, `Anotações`, `Entrevista/Teste Técnico` e `Portais de Vagas` do quadro de origem, conforme decisão de importação.
+- Identificar duplicatas por nome, data e link, inclusive ao repetir a importação.
+- Gravar todas as linhas confirmadas em uma única transação do IndexedDB.
 - Nunca alterar o arquivo de origem.
 
 ## Fora Do Escopo Inicial
@@ -178,7 +181,7 @@ Esses itens exigem uma nova decisão de produto antes da implementação.
 - [x] Implementar visualização e edição de candidaturas.
 - [x] Implementar drag-and-drop entre status e reordenação.
 - [x] Cobrir os fluxos críticos com testes.
-- [ ] Implementar importação assistida do CSV existente.
+- [x] Implementar importação assistida do CSV existente.
 - [ ] Avaliar exportação e backup dos dados locais.
 
 ## Como Executar

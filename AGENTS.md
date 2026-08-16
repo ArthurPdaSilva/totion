@@ -6,7 +6,7 @@ Totion é uma aplicação web local-first para candidatos acompanharem vagas em 
 
 Toda interface, mensagem de validação e texto apresentado ao usuário deve estar em português brasileiro. Nomes técnicos, identificadores e código devem estar em inglês.
 
-A primeira fatia vertical de criação, listagem, edição, exclusão e drag-and-drop está implementada. Não trate importação como funcionalidade existente.
+A primeira fatia vertical de criação, listagem, edição, exclusão e drag-and-drop está implementada. A importação assistida de CSV também está disponível com prévia, correção, descarte de linhas inválidas e confirmação transacional.
 
 ## Fonte De Verdade
 
@@ -219,8 +219,9 @@ O CSV na raiz contém dados reais e deve ser tratado como entrada do usuário:
 - Exibir prévia, erros por linha e resumo antes de persistir.
 - Realizar a gravação confirmada de forma transacional quando possível.
 - Tratar datas e status desconhecidos explicitamente, sem adivinhar silenciosamente.
+- Na importação do quadro atual, ignorar status vazio, `Anotações`, `Entrevista/Teste Técnico` e `Portais de Vagas`, conforme decisão de produto.
 
-A importação não faz parte da primeira implementação do CRUD e do quadro.
+A importação assistida está implementada e deve preservar essas garantias em toda evolução.
 
 ## Convenções De Código
 
