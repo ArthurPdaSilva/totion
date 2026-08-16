@@ -2,9 +2,11 @@ import "@testing-library/jest-dom/vitest";
 import "fake-indexeddb/auto";
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
+import { notification } from "../shared/notifications";
 
 afterEach(() => {
   cleanup();
+  notification.dismissAll();
 });
 
 if (!HTMLDialogElement.prototype.showModal) {

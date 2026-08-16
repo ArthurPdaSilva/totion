@@ -103,6 +103,7 @@ A estratégia de `position` deve permitir inserções e reordenações consisten
 - Dexie e IndexedDB.
 - React Hook Form.
 - Zod.
+- Sonner para notificações transitórias.
 - Vitest.
 - React Testing Library.
 - Playwright.
@@ -198,6 +199,8 @@ Limites máximos de texto devem ser decididos e testados antes da implementaçã
 - Manter foco visível e ordem de tabulação coerente.
 - Botões de ícone precisam de nome acessível.
 - Modais precisam controlar foco, fechar com `Escape` e devolver foco ao acionador.
+- Componentes de feature usam `src/shared/notifications.tsx`; não importam Sonner diretamente.
+- Erros de formulários e modais permanecem próximos ao contexto quando um toast ficaria atrás da top layer.
 - Não depender apenas de cor para comunicar status ou erro.
 - Oferecer áreas de interação adequadas para toque.
 - Respeitar `prefers-reduced-motion` nas animações.

@@ -159,6 +159,9 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
+    expect(
+      await screen.findByText("Candidatura adicionada ao quadro."),
+    ).toBeInTheDocument();
     expect(createButton).toHaveFocus();
 
     const createdCard = within(progressColumn).getByRole("article");
@@ -240,6 +243,9 @@ describe("App", () => {
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
+    expect(
+      await screen.findByText("Candidatura excluída do quadro."),
+    ).toBeInTheDocument();
     expect(
       within(appliedColumn).queryByRole("article"),
     ).not.toBeInTheDocument();

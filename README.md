@@ -80,6 +80,7 @@ Essa decisão permite validar a experiência principal antes de assumir custos d
 - Dexie para acesso tipado ao IndexedDB e migrations.
 - React Hook Form para formulários.
 - Zod para validação e contratos.
+- Sonner encapsulado para notificações transitórias.
 - Vitest e React Testing Library para testes unitários e de componentes.
 - Biome para lint e formatação.
 - npm como gerenciador de pacotes.
@@ -102,9 +103,12 @@ src/
     migrations/           # Versões do banco local
     repositories/         # Leitura e persistência no IndexedDB
   shared/
+    notifications.tsx     # API e apresentação das notificações
     utils/                # Funções puras e utilitários
   styles/                 # Tokens e estilos globais
   test/                   # Configuração do ambiente de testes
+assets/
+  favicon.ico             # Ícone da aplicação
 ```
 
 Componentes não devem acessar o IndexedDB diretamente. A persistência ficará nos repositories, e as operações que alteram status e ordem serão coordenadas por um serviço de domínio.

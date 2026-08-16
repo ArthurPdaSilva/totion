@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Ícone do Totion</title>
+  <defs>
+    <clipPath id="rounded">
+      <rect x="0" y="0" width="64" height="64" rx="14"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#rounded)">
+    <!-- Background: ink base for strong contrast at small sizes -->
+    <rect x="0" y="0" width="64" height="64" fill="#272822"/>
+
+    <!-- subtle warm glow, echoing the app's radial background, clipped to the square -->
+    <circle cx="6" cy="2" r="20" fill="#bb4d36" opacity="0.35"/>
+
+    <!-- Three kanban columns: applied (short), in progress (tall), closed (medium) -->
+    <rect x="12" y="34" width="10" height="18" rx="3" fill="#bb4d36"/>
+    <rect x="27" y="18" width="10" height="34" rx="3" fill="#f3f0e8"/>
+    <rect x="42" y="27" width="10" height="25" rx="3" fill="#c8c0b1"/>
+
+    <!-- a small "card" accent on the tallest column -->
+    <rect x="29" y="23" width="6" height="6" rx="1.5" fill="#bb4d36"/>
+  </g>
+</svg>

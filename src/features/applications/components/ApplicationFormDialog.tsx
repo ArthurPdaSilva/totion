@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import { notification } from "../../../shared/notifications";
 import { getCurrentCivilDate } from "../../../shared/utils/civilDate";
 import {
   APPLICATION_STATUS_LABELS,
@@ -57,6 +58,7 @@ export function ApplicationFormDialog({
       await onCreate(application);
       reset();
       onClose();
+      notification.success("Candidatura adicionada ao quadro.");
     } catch {
       setSubmissionError(
         "Não foi possível salvar a candidatura. Seus dados foram mantidos para você tentar novamente.",

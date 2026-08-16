@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { notification } from "../../../shared/notifications";
 import type { Application } from "../types/application";
 
 type DeleteApplicationDialogProps = {
@@ -41,6 +42,7 @@ export function DeleteApplicationDialog({
     try {
       await onDelete();
       onDeleted();
+      notification.success("Candidatura excluída do quadro.");
     } catch {
       setDeletionError(
         "Não foi possível excluir a candidatura. Ela continua no seu quadro.",

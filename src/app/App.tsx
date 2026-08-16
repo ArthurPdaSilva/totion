@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import brandIconUrl from "../../assets/favicon.svg";
 import { database } from "../database/database";
 import {
   type ApplicationsRepository,
@@ -9,6 +10,7 @@ import { ApplicationFormDialog } from "../features/applications/components/Appli
 import { DeleteApplicationDialog } from "../features/applications/components/DeleteApplicationDialog";
 import { useApplications } from "../features/applications/hooks/useApplications";
 import type { Application } from "../features/applications/types/application";
+import { Notifications } from "../shared/notifications";
 
 const defaultRepository = new DexieApplicationsRepository(database);
 
@@ -69,12 +71,13 @@ export function App({ repository = defaultRepository }: AppProps) {
             href="/"
             aria-label="Totion, início"
           >
-            <span
-              className="flex h-10 w-10 items-center justify-center rounded-card bg-ink font-display text-xl font-bold text-panel shadow-card"
-              aria-hidden="true"
-            >
-              T
-            </span>
+            <img
+              className="h-10 w-10 rounded-card shadow-card"
+              src={brandIconUrl}
+              width="40"
+              height="40"
+              alt=""
+            />
             <span>
               <span className="block font-display text-xl leading-5 font-bold tracking-[-0.025em]">
                 Totion
@@ -171,6 +174,7 @@ export function App({ repository = defaultRepository }: AppProps) {
           onDeleted={finishApplicationDeletion}
         />
       ) : null}
+      <Notifications />
     </div>
   );
 }
