@@ -3,7 +3,6 @@ import type { ApplicationsRepository } from "../../../database/repositories/appl
 import type { NewApplication } from "../schemas/applicationSchema";
 import { createApplication } from "../services/createApplication";
 import { deleteApplication } from "../services/deleteApplication";
-import { importApplications } from "../services/importApplications";
 import { moveApplication } from "../services/moveApplication";
 import {
   type ApplicationDropTarget,
@@ -89,15 +88,10 @@ export function useApplications(repository: ApplicationsRepository) {
     }));
   }
 
-  async function addImportedApplications(inputs: NewApplication[]) {
-    const importedApplications = await importApplications(repository, inputs);
-
-    setState((currentState) => ({
-      status: "ready",
-      applications: [...currentState.applications, ...importedApplications],
-    }));
-
-    return importedApplications;
+  async function restoreApplications(applications: Application[]) {
+    await repository.replaceAll(applications);
+    applicationsRef.current = applications;
+    setState({ status: "ready", applications });
   }
 
   async function editApplication(id: string, input: NewApplication) {
@@ -224,13 +218,13 @@ export function useApplications(repository: ApplicationsRepository) {
   return {
     ...state,
     addApplication,
-    addImportedApplications,
     beginApplicationMove,
     cancelApplicationMove,
     commitApplicationMove,
     editApplication,
     previewApplicationMove,
     removeApplication,
+    restoreApplications,
     reload,
   };
 }

@@ -256,24 +256,37 @@ test("mantém o quadro navegável no desktop e no mobile", async ({
   }
 });
 
-test("importa candidaturas de um CSV após revisar a prévia", async ({
+test("restaura um backup próprio após revisar as três colunas", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Importar CSV" }).click();
+  await page.getByRole("button", { name: "Backup" }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exportar 0 candidaturas" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(
+    /^totion-backup-\d{4}-\d{2}-\d{2}\.totion$/,
+  );
   await page
-    .getByLabel("Arquivo CSV")
-    .setInputFiles("tests/fixtures/applications-import.csv");
+    .getByLabel("Arquivo Totion")
+    .setInputFiles("tests/fixtures/applications-backup.totion");
 
-  await expect(page.getByText("Resumo da prévia")).toBeVisible();
-  await page.getByLabel(/Entrevista/).selectOption("in_progress");
-  await page.getByRole("button", { name: "Importar 2 candidaturas" }).click();
+  await expect(page.getByText("Conteúdo do backup")).toBeVisible();
+  await page
+    .getByLabel("Entendo que o quadro atual será substituído por este backup.")
+    .check();
+  await page.getByRole("button", { name: "Restaurar 3 candidaturas" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 
   await expect(
     page
       .getByRole("region", { name: "Aplicada" })
       .getByText("Pessoa Engenheira de Plataforma"),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Encerrada" })
+      .getByText("Pessoa Desenvolvedora Mobile"),
   ).toBeVisible();
   await expect(
     page
@@ -284,6 +297,7 @@ test("importa candidaturas de um CSV após revisar a prévia", async ({
   await page.reload();
   await expect(page.getByText("Pessoa Engenheira de Plataforma")).toBeVisible();
   await expect(page.getByText("Pessoa Analista de Produto")).toBeVisible();
+  await expect(page.getByText("Pessoa Desenvolvedora Mobile")).toBeVisible();
 });
 
 test("quebra nomes longos sem ultrapassar os limites do card", async ({

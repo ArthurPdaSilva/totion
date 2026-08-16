@@ -1,0 +1,40 @@
+{
+  "format": "totion",
+  "version": 1,
+  "exportedAt": "2026-08-16T15:00:00.000Z",
+  "applications": [
+    {
+      "id": "synthetic-applied",
+      "name": "Pessoa Engenheira de Plataforma",
+      "status": "applied",
+      "appliedAt": "2026-08-14",
+      "jobUrl": "https://empresa.example/plataforma",
+      "notes": null,
+      "position": 0,
+      "createdAt": "2026-08-14T12:00:00.000Z",
+      "updatedAt": "2026-08-14T12:00:00.000Z"
+    },
+    {
+      "id": "synthetic-progress",
+      "name": "Pessoa Analista de Produto",
+      "status": "in_progress",
+      "appliedAt": "2026-08-15",
+      "jobUrl": null,
+      "notes": "Conversa inicial agendada",
+      "position": 0,
+      "createdAt": "2026-08-15T12:00:00.000Z",
+      "updatedAt": "2026-08-15T12:00:00.000Z"
+    },
+    {
+      "id": "synthetic-closed",
+      "name": "Pessoa Desenvolvedora Mobile",
+      "status": "closed",
+      "appliedAt": "2026-08-16",
+      "jobUrl": null,
+      "notes": null,
+      "position": 0,
+      "createdAt": "2026-08-16T12:00:00.000Z",
+      "updatedAt": "2026-08-16T12:00:00.000Z"
+    }
+  ]
+}

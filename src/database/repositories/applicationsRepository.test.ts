@@ -98,37 +98,33 @@ describe("DexieApplicationsRepository", () => {
     ]);
   });
 
-  it("importa em lote de forma transacional e ignora duplicatas", async () => {
+  it("substitui o quadro de forma transacional ao restaurar um backup", async () => {
     const database = createDatabase();
     const repository = new DexieApplicationsRepository(database);
-    const first = createApplication("imported-1", "applied");
-    const duplicate = {
-      ...createApplication("imported-duplicate", "closed"),
-      name: first.name,
-      appliedAt: first.appliedAt,
-      jobUrl: first.jobUrl,
-    };
+    await repository.create(createApplication("current", "applied"));
+    const restored = [
+      { ...createApplication("restored-applied", "applied"), position: 0 },
+      { ...createApplication("restored-closed", "closed"), position: 0 },
+    ];
 
-    await expect(
-      repository.createMany([first, duplicate]),
-    ).resolves.toMatchObject([
-      { id: "imported-1", status: "applied", position: 0 },
-    ]);
-    await expect(repository.createMany([first])).resolves.toEqual([]);
+    await repository.replaceAll(restored);
     await expect(repository.list()).resolves.toMatchObject([
-      { id: "imported-1", status: "applied", position: 0 },
+      { id: "restored-applied", status: "applied", position: 0 },
+      { id: "restored-closed", status: "closed", position: 0 },
     ]);
 
     vi.spyOn(database.applications, "bulkAdd").mockRejectedValueOnce(
-      new Error("Falha sintética na importação"),
+      new Error("Falha sintética na restauração"),
     );
     await expect(
-      repository.createMany([
-        createApplication("imported-2", "applied"),
-        createApplication("imported-3", "closed"),
+      repository.replaceAll([
+        { ...createApplication("replacement", "in_progress"), position: 0 },
       ]),
-    ).rejects.toThrow("Falha sintética na importação");
-    await expect(repository.list()).resolves.toHaveLength(1);
+    ).rejects.toThrow("Falha sintética na restauração");
+    await expect(repository.list()).resolves.toMatchObject([
+      { id: "restored-applied" },
+      { id: "restored-closed" },
+    ]);
   });
 
   it("atualiza os dados sem alterar identidade, criação ou posição", async () => {

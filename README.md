@@ -6,9 +6,7 @@ Aplicação web para candidatos organizarem vagas e acompanharem cada candidatur
 
 O projeto possui sua primeira fatia vertical implementada. A aplicação exibe o quadro responsivo com os três status, permite cadastrar, visualizar, editar, excluir, mover e reordenar candidaturas e persiste os registros no IndexedDB do navegador.
 
-A importação do CSV ainda não foi implementada.
-
-O repositório contém um CSV exportado do quadro usado atualmente no Notion. Ele servirá como referência de dados e, em uma etapa posterior, como origem para uma funcionalidade de importação.
+A aplicação também exporta e restaura backups próprios e versionados do quadro. O CSV histórico permanece no repositório apenas como registro da migração inicial e não é necessário para usar a aplicação.
 
 ## Objetivo
 
@@ -70,7 +68,7 @@ Nome, status e data da aplicação são obrigatórios. O link e as anotações s
 
 O MVP será local-first e não terá backend, conta de usuário ou sincronização. Os dados serão armazenados no IndexedDB do navegador.
 
-Essa decisão permite validar a experiência principal antes de assumir custos de infraestrutura. Até que exista exportação ou sincronização, limpar os dados do navegador pode remover todas as candidaturas.
+Essa decisão permite validar a experiência principal antes de assumir custos de infraestrutura. Como limpar os dados do navegador pode remover todas as candidaturas, o usuário pode exportar um backup local antes dessa operação e restaurá-lo depois.
 
 ## Tecnologias
 
@@ -81,7 +79,6 @@ Essa decisão permite validar a experiência principal antes de assumir custos d
 - Dexie para acesso tipado ao IndexedDB e migrations.
 - React Hook Form para formulários.
 - Zod para validação e contratos.
-- Papa Parse para leitura segura dos arquivos CSV.
 - Sonner encapsulado para notificações transitórias.
 - Vitest e React Testing Library para testes unitários e de componentes.
 - Playwright para os fluxos críticos no navegador em desktop e mobile.
@@ -137,21 +134,19 @@ O schema inicial é criado por migration. Criação, mudança de status e reorde
 - Estados de foco, hover, arraste, vazio, carregamento e erro devem ser explícitos.
 - A interface e todas as mensagens apresentadas ao usuário serão em português brasileiro.
 
-## Importação Do Quadro Atual
+## Backup Do Quadro
 
-O arquivo `Candidaturas d53846254da9471c88ab8f81817a9505_all.csv` não é carregado automaticamente nem usado em testes como fixture integral, pois contém dados reais.
+O menu **Backup** exporta um arquivo `.totion` em JSON com versão explícita. O arquivo inclui todos os campos das candidaturas, IDs estáveis e a posição dos cards nas três colunas.
 
-A importação assistida permite selecionar esse arquivo pela interface e:
+Ao restaurar um backup, a aplicação:
 
-- Exibir uma prévia antes de gravar.
-- Mapear `Name`, `Aplicado em`, `Link` e `Status` para o modelo atual.
-- Converter datas em inglês para `YYYY-MM-DD`.
-- Permitir ao usuário corrigir ou ignorar linhas inválidas.
-- Exigir uma decisão para valores de status desconhecidos, sem adivinhar o destino.
-- Ignorar os valores vazio, `Anotações`, `Entrevista/Teste Técnico` e `Portais de Vagas` do quadro de origem, conforme decisão de importação.
-- Identificar duplicatas por nome, data e link, inclusive ao repetir a importação.
-- Gravar todas as linhas confirmadas em uma única transação do IndexedDB.
-- Nunca alterar o arquivo de origem.
+- Valida formato, versão, campos, URLs, datas, IDs e posições antes de gravar.
+- Exibe a quantidade de cards em Aplicada, Em andamento e Encerrada.
+- Exige confirmação explícita de que o quadro atual será substituído.
+- Substitui todas as candidaturas em uma única transação do IndexedDB.
+- Mantém o quadro anterior integralmente se a persistência falhar.
+
+O arquivo CSV com dados reais usado na migração inicial não é carregado pela aplicação, não é necessário para o backup e não é copiado para testes ou documentação.
 
 ## Fora Do Escopo Inicial
 
@@ -181,8 +176,8 @@ Esses itens exigem uma nova decisão de produto antes da implementação.
 - [x] Implementar visualização e edição de candidaturas.
 - [x] Implementar drag-and-drop entre status e reordenação.
 - [x] Cobrir os fluxos críticos com testes.
-- [x] Implementar importação assistida do CSV existente.
-- [ ] Avaliar exportação e backup dos dados locais.
+- [x] Concluir a migração assistida do CSV existente.
+- [x] Implementar exportação e restauração de backup dos dados locais.
 
 ## Como Executar
 

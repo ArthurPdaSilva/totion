@@ -6,7 +6,7 @@ Totion é uma aplicação web local-first para candidatos acompanharem vagas em 
 
 Toda interface, mensagem de validação e texto apresentado ao usuário deve estar em português brasileiro. Nomes técnicos, identificadores e código devem estar em inglês.
 
-A primeira fatia vertical de criação, listagem, edição, exclusão e drag-and-drop está implementada. A importação assistida de CSV também está disponível com prévia, correção, descarte de linhas inválidas e confirmação transacional.
+A primeira fatia vertical de criação, listagem, edição, exclusão e drag-and-drop está implementada. A aplicação também exporta e restaura backups locais próprios, com validação, prévia por status, confirmação e gravação transacional.
 
 ## Fonte De Verdade
 
@@ -89,6 +89,8 @@ A estratégia de `position` deve permitir inserções e reordenações consisten
 ### Dados Locais
 
 - O IndexedDB é a fonte persistente do MVP.
+- O backup próprio usa um arquivo `.totion` em JSON, com formato e versão explícitos.
+- A restauração valida todo o arquivo e substitui o quadro em uma única transação após confirmação explícita.
 - Toda evolução de schema deve ser versionada por migration.
 - Componentes e hooks de interface não acessam Dexie diretamente.
 - Repositories encapsulam consultas e persistência.
@@ -208,20 +210,15 @@ Limites máximos de texto devem ser decididos e testados antes da implementaçã
 - No mobile, permitir navegação horizontal pelas colunas sem bloquear a rolagem vertical da página.
 - Preservar os padrões visuais já implementados antes de introduzir novos componentes.
 
-## Importação Do CSV
+## CSV Legado
 
-O CSV na raiz contém dados reais e deve ser tratado como entrada do usuário:
+O CSV na raiz contém dados reais usados na migração inicial e deve ser preservado como entrada histórica do usuário:
 
 - Não modificar, reformatar ou remover o arquivo sem solicitação explícita.
 - Não copiar seu conteúdo para fixtures, snapshots, logs ou documentação.
 - Criar fixtures sintéticas e pequenas para testes.
-- Fazer parsing por uma biblioteca adequada; não dividir linhas manualmente por vírgulas.
-- Exibir prévia, erros por linha e resumo antes de persistir.
-- Realizar a gravação confirmada de forma transacional quando possível.
-- Tratar datas e status desconhecidos explicitamente, sem adivinhar silenciosamente.
-- Na importação do quadro atual, ignorar status vazio, `Anotações`, `Entrevista/Teste Técnico` e `Portais de Vagas`, conforme decisão de produto.
-
-A importação assistida está implementada e deve preservar essas garantias em toda evolução.
+- Não reintroduzir dependência desse arquivo no fluxo normal de importação e exportação.
+- Não adicionar novamente uma biblioteca de CSV sem uma nova necessidade aprovada.
 
 ## Convenções De Código
 
@@ -249,6 +246,7 @@ Prioridades:
 - Movimento entre colunas, incluindo coluna vazia.
 - Rollback visual quando a persistência falhar.
 - Persistência e migrations do repository.
+- Validação, round-trip e rollback do backup local.
 - Criação, edição e exclusão.
 - Drag por teclado e interações acessíveis.
 - Layout e fluxo principal em viewport desktop e mobile.

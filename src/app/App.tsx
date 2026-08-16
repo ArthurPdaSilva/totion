@@ -13,9 +13,9 @@ import type { Application } from "../features/applications/types/application";
 import { Notifications } from "../shared/notifications";
 
 const defaultRepository = new DexieApplicationsRepository(database);
-const ImportApplicationsDialog = lazy(() =>
-  import("../features/applications/components/ImportApplicationsDialog").then(
-    (module) => ({ default: module.ImportApplicationsDialog }),
+const BackupApplicationsDialog = lazy(() =>
+  import("../features/applications/components/BackupApplicationsDialog").then(
+    (module) => ({ default: module.BackupApplicationsDialog }),
   ),
 );
 
@@ -25,20 +25,19 @@ type AppProps = {
 
 export function App({ repository = defaultRepository }: AppProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isBackupOpen, setIsBackupOpen] = useState(false);
   const [applicationToEdit, setApplicationToEdit] =
     useState<Application | null>(null);
   const [applicationToDelete, setApplicationToDelete] =
     useState<Application | null>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
-  const importButtonRef = useRef<HTMLButtonElement>(null);
+  const backupButtonRef = useRef<HTMLButtonElement>(null);
   const editButtonRef = useRef<HTMLButtonElement | null>(null);
   const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
   const {
     applications,
     status,
     addApplication,
-    addImportedApplications,
     beginApplicationMove,
     cancelApplicationMove,
     commitApplicationMove,
@@ -46,6 +45,7 @@ export function App({ repository = defaultRepository }: AppProps) {
     previewApplicationMove,
     removeApplication,
     reload,
+    restoreApplications,
   } = useApplications(repository);
 
   function closeForm() {
@@ -53,9 +53,9 @@ export function App({ repository = defaultRepository }: AppProps) {
     queueMicrotask(() => createButtonRef.current?.focus());
   }
 
-  function closeImport() {
-    setIsImportOpen(false);
-    queueMicrotask(() => importButtonRef.current?.focus());
+  function closeBackup() {
+    setIsBackupOpen(false);
+    queueMicrotask(() => backupButtonRef.current?.focus());
   }
 
   function requestApplicationEdit(
@@ -142,12 +142,12 @@ export function App({ repository = defaultRepository }: AppProps) {
 
           <div className="flex items-center gap-2">
             <button
-              ref={importButtonRef}
+              ref={backupButtonRef}
               type="button"
               className="inline-flex min-h-11 items-center justify-center rounded-button border border-line-strong bg-card px-3 text-sm font-bold text-ink transition hover:bg-canvas sm:px-4"
-              onClick={() => setIsImportOpen(true)}
+              onClick={() => setIsBackupOpen(true)}
             >
-              Importar CSV
+              Backup
             </button>
             <button
               ref={createButtonRef}
@@ -235,18 +235,18 @@ export function App({ repository = defaultRepository }: AppProps) {
         <ApplicationFormDialog onClose={closeForm} onSubmit={addApplication} />
       ) : null}
 
-      {isImportOpen ? (
+      {isBackupOpen ? (
         <Suspense
           fallback={
             <p className="sr-only" role="status">
-              Carregando importação...
+              Carregando backup...
             </p>
           }
         >
-          <ImportApplicationsDialog
+          <BackupApplicationsDialog
             applications={applications}
-            onClose={closeImport}
-            onImport={addImportedApplications}
+            onClose={closeBackup}
+            onRestore={restoreApplications}
           />
         </Suspense>
       ) : null}

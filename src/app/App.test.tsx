@@ -12,6 +12,7 @@ import type {
   ApplicationUpdate,
   ApplicationWithoutPosition,
 } from "../database/repositories/applicationsRepository";
+import { createApplicationBackup } from "../features/applications/services/applicationBackup";
 import type { Application } from "../features/applications/types/application";
 import { App } from "./App";
 
@@ -21,6 +22,7 @@ class MemoryApplicationsRepository implements ApplicationsRepository {
   shouldFailUpdate = false;
   shouldFailDeletion = false;
   shouldFailMove = false;
+  shouldFailReplacement = false;
 
   async list() {
     return [...this.applications];
@@ -40,14 +42,12 @@ class MemoryApplicationsRepository implements ApplicationsRepository {
     return persistedApplication;
   }
 
-  async createMany(applications: ApplicationWithoutPosition[]) {
-    const importedApplications: Application[] = [];
-
-    for (const application of applications) {
-      importedApplications.push(await this.create(application));
+  async replaceAll(applications: Application[]) {
+    if (this.shouldFailReplacement) {
+      throw new Error("Falha sintética");
     }
 
-    return importedApplications;
+    this.applications = [...applications];
   }
 
   async updateById(id: string, update: ApplicationUpdate) {
@@ -283,38 +283,54 @@ describe("App", () => {
     expect(repository.applications).toHaveLength(0);
   });
 
-  it("revisa e importa candidaturas de um CSV", async () => {
+  it("revisa e restaura um backup próprio do Totion", async () => {
     const user = userEvent.setup();
     const repository = new MemoryApplicationsRepository();
+    repository.applications = [
+      createPersistedApplication({ name: "Anterior" }),
+    ];
     render(<App repository={repository} />);
 
     await screen.findByRole("region", { name: "Aplicada" });
-    const importButton = screen.getByRole("button", { name: "Importar CSV" });
-    await user.click(importButton);
-    const csvFile = new File(
-      [
-        "Name,Aplicado em,Link,Status\n",
-        'Pessoa Front-end,"August 16, 2026",https://empresa.example/front,Aplicada\n',
-        'Pessoa de Produto,"August 17, 2026",,Entrevista\n',
-        "Linha inválida,,link inválido,Aplicada",
-      ],
-      "candidaturas-sinteticas.csv",
-      { type: "text/csv" },
+    const backupButton = screen.getByRole("button", { name: "Backup" });
+    await user.click(backupButton);
+    const backupApplications = [
+      createPersistedApplication({
+        id: "restored-applied",
+        name: "Pessoa Front-end",
+      }),
+      createPersistedApplication({
+        id: "restored-progress",
+        name: "Pessoa de Produto",
+        status: "in_progress",
+      }),
+      createPersistedApplication({
+        id: "restored-closed",
+        name: "Pessoa de Dados",
+        status: "closed",
+      }),
+    ];
+    const backupFile = new File(
+      [createApplicationBackup(backupApplications).content],
+      "candidaturas-sinteticas.totion",
+      { type: "application/json" },
     );
-    await user.upload(await screen.findByLabelText("Arquivo CSV"), csvFile);
+    await user.upload(
+      await screen.findByLabelText("Arquivo Totion"),
+      backupFile,
+    );
 
-    expect(await screen.findByText("Resumo da prévia")).toBeInTheDocument();
-    expect(screen.getByText("3", { selector: "dd" })).toBeInTheDocument();
-    await user.selectOptions(
-      screen.getByLabelText(/Entrevista/),
-      "in_progress",
-    );
+    expect(await screen.findByText("Conteúdo do backup")).toBeInTheDocument();
+    const restoreButton = screen.getByRole("button", {
+      name: "Restaurar 3 candidaturas",
+    });
+    expect(restoreButton).toBeDisabled();
     await user.click(
-      await screen.findByRole("button", { name: "Ignorar linha" }),
+      screen.getByLabelText(
+        "Entendo que o quadro atual será substituído por este backup.",
+      ),
     );
-    await user.click(
-      screen.getByRole("button", { name: "Importar 2 candidaturas" }),
-    );
+    await user.click(restoreButton);
 
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
@@ -329,8 +345,14 @@ describe("App", () => {
         "Pessoa de Produto",
       ),
     ).toBeInTheDocument();
-    expect(repository.applications).toHaveLength(2);
-    expect(importButton).toHaveFocus();
+    expect(
+      within(screen.getByRole("region", { name: "Encerrada" })).getByText(
+        "Pessoa de Dados",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Anterior")).not.toBeInTheDocument();
+    expect(repository.applications).toEqual(backupApplications);
+    expect(backupButton).toHaveFocus();
   });
 
   it("exibe os detalhes e edita uma candidatura", async () => {

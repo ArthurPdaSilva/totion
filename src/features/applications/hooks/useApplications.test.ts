@@ -33,8 +33,8 @@ describe("useApplications", () => {
       async create() {
         throw new Error("Não usado neste teste");
       },
-      async createMany() {
-        return [];
+      async replaceAll() {
+        throw new Error("Não usado neste teste");
       },
       async updateById() {
         return [
@@ -86,8 +86,8 @@ describe("useApplications", () => {
       async create() {
         throw new Error("Não usado neste teste");
       },
-      async createMany() {
-        return [];
+      async replaceAll() {
+        throw new Error("Não usado neste teste");
       },
       async updateById() {
         return [];
@@ -135,8 +135,8 @@ describe("useApplications", () => {
       async create() {
         throw new Error("Não usado neste teste");
       },
-      async createMany() {
-        return [];
+      async replaceAll() {
+        throw new Error("Não usado neste teste");
       },
       async updateById() {
         return [];
