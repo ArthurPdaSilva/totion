@@ -140,18 +140,18 @@ export function ApplicationColumn({
   return (
     <section
       ref={setNodeRef}
-      className={`w-board-column shrink-0 snap-start rounded-panel border ${styles.border} ${styles.surface} p-3 transition sm:p-4 ${isOver ? "ring-3 ring-focus/20" : ""}`}
+      className={`w-board-column shrink-0 snap-start rounded-panel border ${styles.border} ${styles.surface} p-3 transition sm:p-4 xl:w-auto xl:min-w-0 xl:flex-1 xl:shrink xl:snap-none xl:p-3 2xl:p-4 ${isOver ? "ring-3 ring-focus/20" : ""}`}
       aria-labelledby={headingId}
     >
       <header className="mb-4 flex min-h-8 items-center justify-between gap-3 px-1">
-        <div className="flex items-center gap-2.5">
+        <div className="flex min-w-0 items-center gap-2.5">
           <span
             className={`h-2.5 w-2.5 rounded-full ${styles.marker}`}
             aria-hidden="true"
           />
           <h2
             id={headingId}
-            className="font-display text-lg font-bold tracking-[-0.015em] text-ink"
+            className="truncate font-display text-lg font-bold tracking-[-0.015em] text-ink"
             tabIndex={-1}
           >
             {label}

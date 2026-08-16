@@ -154,7 +154,8 @@ O schema inicial é criado por migration. Criação, mudança de status e reorde
 - Identidade própria; a referência ao Notion é de interação, não de cópia visual.
 - Cada status terá cor de apoio distinta, mantendo contraste adequado.
 - Cards devem priorizar nome, data e acesso ao link sem exibir anotações longas por completo.
-- No mobile, as colunas poderão ser navegadas horizontalmente sem quebrar o drag-and-drop.
+- No desktop, as cinco colunas dividem a largura disponível sem rolagem horizontal.
+- Em telas menores, as colunas podem ser navegadas horizontalmente sem quebrar o drag-and-drop.
 - Colunas longas devem manter apenas lotes progressivos de cards montados para reduzir o custo do drag-and-drop.
 - Estados de foco, hover, arraste, vazio, carregamento e erro devem ser explícitos.
 - A interface e todas as mensagens apresentadas ao usuário serão em português brasileiro.

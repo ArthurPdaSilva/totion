@@ -19,7 +19,7 @@ export function ApplicationCard({
   onRequestDelete,
 }: ApplicationCardProps) {
   return (
-    <article className="group rounded-card border border-line bg-card p-4 shadow-card transition duration-200 ease-standard hover:-translate-y-0.5 hover:border-line-strong hover:shadow-card-hover motion-reduce:transform-none">
+    <article className="group rounded-card border border-line bg-card p-4 shadow-card transition duration-200 ease-standard hover:-translate-y-0.5 hover:border-line-strong hover:shadow-card-hover motion-reduce:transform-none xl:p-3 2xl:p-4">
       <div className="flex items-start justify-between gap-3">
         <h3 className="min-w-0 flex-1 break-words pt-1 text-[0.9375rem] leading-6 font-semibold text-ink">
           {application.name}
@@ -29,7 +29,7 @@ export function ApplicationCard({
           <button
             id={`edit-application-${application.id}`}
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-info-soft hover:text-info hover:opacity-100 focus-visible:opacity-100"
+            className="flex h-10 w-10 items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-info-soft hover:text-info hover:opacity-100 focus-visible:opacity-100 xl:h-8 xl:w-8 2xl:h-10 2xl:w-10"
             aria-label={`Editar candidatura ${application.name}`}
             title="Editar candidatura"
             onClick={(event) => onRequestEdit(application, event.currentTarget)}
@@ -38,7 +38,7 @@ export function ApplicationCard({
           </button>
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-danger-soft hover:text-danger hover:opacity-100 focus-visible:opacity-100"
+            className="flex h-10 w-10 items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-danger-soft hover:text-danger hover:opacity-100 focus-visible:opacity-100 xl:h-8 xl:w-8 2xl:h-10 2xl:w-10"
             aria-label={`Excluir candidatura ${application.name}`}
             title="Excluir candidatura"
             onClick={(event) =>

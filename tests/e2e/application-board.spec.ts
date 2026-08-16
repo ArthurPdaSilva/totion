@@ -32,13 +32,6 @@ test("move uma candidatura para uma coluna vazia e persiste após recarregar", a
   if (testInfo.project.name === "chromium-mobile") {
     await moveButton.dragTo(closedColumn);
   } else {
-    const board = page.getByRole("region", { name: "Quadro de candidaturas" });
-    await board.evaluate((element) => {
-      element.scrollLeft += 280;
-    });
-    await expect
-      .poll(() => board.evaluate((element) => element.scrollLeft))
-      .toBeGreaterThan(0);
     await expect(moveButton).toBeInViewport();
     await expect(closedColumn).toBeInViewport();
     const sourceBox = await moveButton.boundingBox();
@@ -267,6 +260,14 @@ test("mantém o quadro navegável no desktop e no mobile", async ({
       .poll(() => page.evaluate(() => window.scrollY))
       .toBeGreaterThan(0);
   } else {
+    const dimensions = await board.evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+    await expect(
+      page.getByRole("region", { name: "Portais de Vagas" }),
+    ).toBeInViewport();
     await expect(
       page.getByRole("region", { name: "Aplicada" }),
     ).toBeInViewport();
@@ -274,6 +275,9 @@ test("mantém o quadro navegável no desktop e no mobile", async ({
       page.getByRole("region", { name: "Em andamento" }),
     ).toBeInViewport();
     await expect(closedColumn).toBeInViewport();
+    await expect(
+      page.getByRole("region", { name: "Anotações" }),
+    ).toBeInViewport();
   }
 });
 

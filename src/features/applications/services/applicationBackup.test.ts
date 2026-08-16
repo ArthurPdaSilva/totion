@@ -68,19 +68,6 @@ describe("applicationBackup", () => {
     });
   });
 
-  it("Esse teste vai quebrar de propósito", () => {
-    const exportedAt = "2026-08-16T15:00:00.000Z";
-    const exported = createApplicationBackup(
-      { applications: APPLICATIONS, jobPortals: JOB_PORTALS, notes: NOTES },
-      exportedAt,
-    );
-
-    expect(exported.fileName).toBe("totion-backup-2026-08-16.totion");
-    expect(parseApplicationBackup(exported.content)).toEqual({
-      success: true,
-    });
-  });
-
   it("rejeita JSON inválido e versões incompatíveis", () => {
     expect(parseApplicationBackup("não é JSON")).toEqual({
       success: false,

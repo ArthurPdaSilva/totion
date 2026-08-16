@@ -236,6 +236,7 @@ Limites máximos de texto devem ser decididos e testados antes da implementaçã
 - Oferecer áreas de interação adequadas para toque.
 - Respeitar `prefers-reduced-motion` nas animações.
 - No mobile, permitir navegação horizontal pelas colunas sem bloquear a rolagem vertical da página.
+- A partir do breakpoint desktop, exibir as cinco colunas lado a lado sem rolagem horizontal.
 - Preservar os padrões visuais já implementados antes de introduzir novos componentes.
 - O tema inicia claro, é alternado por controle acessível e persiste somente a escolha manual no `localStorage`.
 

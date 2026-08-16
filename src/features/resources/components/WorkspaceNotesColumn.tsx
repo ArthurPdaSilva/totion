@@ -64,7 +64,7 @@ export function WorkspaceNotesColumn({
         renderItem={(note) => (
           <article
             key={note.id}
-            className="rounded-card border border-line bg-card p-4 shadow-card"
+            className="rounded-card border border-line bg-card p-4 shadow-card xl:p-3 2xl:p-4"
           >
             <p className="whitespace-pre-wrap break-words text-sm leading-6 text-ink">
               {note.content}

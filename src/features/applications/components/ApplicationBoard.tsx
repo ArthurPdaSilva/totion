@@ -444,7 +444,7 @@ export function ApplicationBoard({
       }}
     >
       <section
-        className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-5 sm:gap-5"
+        className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-5 sm:gap-5 xl:snap-none xl:gap-3 xl:overflow-x-clip xl:pb-0 2xl:gap-4"
         aria-busy={isLoading || isCommitting}
         aria-label="Quadro de candidaturas"
       >
