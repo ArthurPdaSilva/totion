@@ -48,6 +48,9 @@ describe("useApplications", () => {
           },
         ];
       },
+      async moveById() {
+        return [];
+      },
       async deleteById() {
         return [];
       },
@@ -70,5 +73,95 @@ describe("useApplications", () => {
       { id: "applied-2", status: "closed", position: 0 },
       { id: "applied-3", status: "applied", position: 1 },
     ]);
+  });
+
+  it("restaura a ordem otimista quando a persistência falha", async () => {
+    const repository: ApplicationsRepository = {
+      async list() {
+        return INITIAL_APPLICATIONS;
+      },
+      async create() {
+        throw new Error("Não usado neste teste");
+      },
+      async updateById() {
+        return [];
+      },
+      async moveById() {
+        throw new Error("Falha sintética no movimento");
+      },
+      async deleteById() {
+        return [];
+      },
+    };
+    const { result } = renderHook(() => useApplications(repository));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    act(() => {
+      result.current.beginApplicationMove();
+      result.current.previewApplicationMove("applied-1", {
+        type: "application",
+        id: "applied-3",
+        edge: "after",
+      });
+    });
+    expect(
+      result.current.applications.map((application) => application.id),
+    ).toEqual(["applied-2", "applied-3", "applied-1"]);
+
+    await act(async () => {
+      await expect(
+        result.current.commitApplicationMove("applied-1", {
+          type: "application",
+          id: "applied-3",
+          edge: "after",
+        }),
+      ).rejects.toThrow("Falha sintética no movimento");
+    });
+    expect(result.current.applications).toMatchObject(INITIAL_APPLICATIONS);
+  });
+
+  it("aplica a borda final quando ela muda depois do preview", async () => {
+    let persistedPosition: number | null = null;
+    const repository: ApplicationsRepository = {
+      async list() {
+        return INITIAL_APPLICATIONS;
+      },
+      async create() {
+        throw new Error("Não usado neste teste");
+      },
+      async updateById() {
+        return [];
+      },
+      async moveById(_id, _status, targetPosition) {
+        persistedPosition = targetPosition;
+        return [];
+      },
+      async deleteById() {
+        return [];
+      },
+    };
+    const { result } = renderHook(() => useApplications(repository));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    act(() => {
+      result.current.beginApplicationMove();
+      result.current.previewApplicationMove("applied-1", {
+        type: "application",
+        id: "applied-3",
+        edge: "before",
+      });
+    });
+    await act(async () => {
+      await result.current.commitApplicationMove("applied-1", {
+        type: "application",
+        id: "applied-3",
+        edge: "after",
+      });
+    });
+
+    expect(
+      result.current.applications.map((application) => application.id),
+    ).toEqual(["applied-2", "applied-3", "applied-1"]);
+    expect(persistedPosition).toBe(2);
   });
 });

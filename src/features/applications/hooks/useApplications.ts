@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ApplicationsRepository } from "../../../database/repositories/applicationsRepository";
 import type { NewApplication } from "../schemas/applicationSchema";
 import { createApplication } from "../services/createApplication";
 import { deleteApplication } from "../services/deleteApplication";
+import { moveApplication } from "../services/moveApplication";
+import {
+  type ApplicationDropTarget,
+  reorderApplications,
+} from "../services/reorderApplications";
 import { updateApplication } from "../services/updateApplication";
 import type { Application } from "../types/application";
 
@@ -17,6 +22,13 @@ export function useApplications(repository: ApplicationsRepository) {
     applications: [],
   });
   const [reloadKey, setReloadKey] = useState(0);
+  const applicationsRef = useRef<Application[]>([]);
+  const movementSnapshotRef = useRef<Application[] | null>(null);
+  const isMoveCommitPendingRef = useRef(false);
+
+  useEffect(() => {
+    applicationsRef.current = state.applications;
+  }, [state.applications]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey intentionally starts a fresh read.
   useEffect(() => {
@@ -91,6 +103,108 @@ export function useApplications(repository: ApplicationsRepository) {
     }));
   }
 
+  function beginApplicationMove() {
+    if (isMoveCommitPendingRef.current) {
+      return;
+    }
+
+    movementSnapshotRef.current = applicationsRef.current;
+  }
+
+  function previewApplicationMove(id: string, target: ApplicationDropTarget) {
+    if (isMoveCommitPendingRef.current) {
+      return;
+    }
+
+    const reorderedApplications = reorderApplications(
+      applicationsRef.current,
+      id,
+      target,
+    );
+    applicationsRef.current = reorderedApplications;
+    setState({ status: "ready", applications: reorderedApplications });
+  }
+
+  async function commitApplicationMove(
+    id: string,
+    target: ApplicationDropTarget,
+  ) {
+    if (isMoveCommitPendingRef.current) {
+      throw new Error("Já existe um movimento sendo salvo");
+    }
+
+    const snapshot = movementSnapshotRef.current;
+    const reorderedApplications = reorderApplications(
+      applicationsRef.current,
+      id,
+      target,
+    );
+    const movedApplication = reorderedApplications.find(
+      (application) => application.id === id,
+    );
+    const previousApplication = snapshot?.find(
+      (application) => application.id === id,
+    );
+
+    if (!movedApplication) {
+      cancelApplicationMove();
+      return;
+    }
+
+    applicationsRef.current = reorderedApplications;
+    setState({ status: "ready", applications: reorderedApplications });
+
+    if (
+      previousApplication?.status === movedApplication.status &&
+      previousApplication.position === movedApplication.position
+    ) {
+      movementSnapshotRef.current = null;
+      return;
+    }
+
+    isMoveCommitPendingRef.current = true;
+
+    try {
+      const changedApplications = await moveApplication(
+        repository,
+        id,
+        movedApplication.status,
+        movedApplication.position,
+      );
+      const changedApplicationsById = new Map(
+        changedApplications.map((application) => [application.id, application]),
+      );
+      const persistedApplications = reorderedApplications.map(
+        (application) =>
+          changedApplicationsById.get(application.id) ?? application,
+      );
+      applicationsRef.current = persistedApplications;
+      setState({ status: "ready", applications: persistedApplications });
+      movementSnapshotRef.current = null;
+    } catch (error) {
+      if (snapshot) {
+        applicationsRef.current = snapshot;
+        setState({ status: "ready", applications: snapshot });
+      }
+
+      movementSnapshotRef.current = null;
+      throw error;
+    } finally {
+      isMoveCommitPendingRef.current = false;
+    }
+  }
+
+  function cancelApplicationMove() {
+    const snapshot = movementSnapshotRef.current;
+
+    if (snapshot) {
+      applicationsRef.current = snapshot;
+      setState({ status: "ready", applications: snapshot });
+    }
+
+    movementSnapshotRef.current = null;
+  }
+
   function reload() {
     setReloadKey((currentKey) => currentKey + 1);
   }
@@ -98,7 +212,11 @@ export function useApplications(repository: ApplicationsRepository) {
   return {
     ...state,
     addApplication,
+    beginApplicationMove,
+    cancelApplicationMove,
+    commitApplicationMove,
     editApplication,
+    previewApplicationMove,
     removeApplication,
     reload,
   };

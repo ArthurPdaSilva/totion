@@ -6,7 +6,7 @@ Totion é uma aplicação web local-first para candidatos acompanharem vagas em 
 
 Toda interface, mensagem de validação e texto apresentado ao usuário deve estar em português brasileiro. Nomes técnicos, identificadores e código devem estar em inglês.
 
-A primeira fatia vertical de criação, listagem, edição e exclusão está implementada. Não trate drag-and-drop ou importação como funcionalidades existentes.
+A primeira fatia vertical de criação, listagem, edição, exclusão e drag-and-drop está implementada. Não trate importação como funcionalidade existente.
 
 ## Fonte De Verdade
 
@@ -256,7 +256,7 @@ Não teste detalhes internos do `dnd-kit`. Teste o comportamento do domínio em 
 
 Depois de alterações, execute os scripts disponíveis de typecheck, Biome e testes. Quando o projeto ainda não possuir esses scripts, registre essa limitação sem inventar comandos bem-sucedidos.
 
-O workflow `.github/workflows/ci.yml` valida os documentos e arquivos obrigatórios, instala com `npm ci` e executa typecheck, Biome, testes e build. Não enfraqueça ou ignore essas etapas para contornar uma falha.
+O workflow `.github/workflows/ci.yml` valida os documentos e arquivos obrigatórios, instala com `npm ci` e executa typecheck, Biome, testes, Playwright e build. Não enfraqueça ou ignore essas etapas para contornar uma falha.
 
 ## Fluxo De Trabalho Dos Agentes
 

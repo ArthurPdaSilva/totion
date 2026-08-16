@@ -69,6 +69,32 @@ class MemoryApplicationsRepository implements ApplicationsRepository {
     return [updatedApplication];
   }
 
+  async moveById(
+    id: string,
+    targetStatus: Application["status"],
+    targetPosition: number,
+    updatedAt: string,
+  ) {
+    const currentApplication = this.applications.find(
+      (application) => application.id === id,
+    );
+
+    if (!currentApplication) {
+      throw new Error("Candidatura não encontrada");
+    }
+
+    const movedApplication = {
+      ...currentApplication,
+      status: targetStatus,
+      position: targetPosition,
+      updatedAt,
+    };
+    this.applications = this.applications.map((application) =>
+      application.id === id ? movedApplication : application,
+    );
+    return [movedApplication];
+  }
+
   async deleteById(id: string, reorderedAt: string) {
     if (this.shouldFailDeletion) {
       throw new Error("Falha sintética");
@@ -205,6 +231,11 @@ describe("App", () => {
       within(progressColumn).getByLabelText("1 candidatura"),
     ).toBeInTheDocument();
     expect(within(createdCard).getByText("Com anotações")).toBeInTheDocument();
+    expect(
+      within(createdCard).getByRole("button", {
+        name: "Mover candidatura Desenvolvedor React",
+      }),
+    ).toBeInTheDocument();
 
     const jobLink = within(createdCard).getByRole("link", {
       name: "Abrir vaga Desenvolvedor React em uma nova aba",
@@ -342,6 +373,39 @@ describe("App", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(nameInput).toHaveValue("Desenvolvedor Full Stack");
     expect(repository.applications[0]?.name).toBe("Desenvolvedor Back-end");
+  });
+
+  it("inicia e cancela o movimento pelo teclado", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    repository.applications = [createPersistedApplication()];
+    render(<App repository={repository} />);
+
+    const moveButton = await screen.findByRole("button", {
+      name: "Mover candidatura Desenvolvedor Back-end",
+    });
+    moveButton.focus();
+    await user.keyboard(" ");
+
+    expect(
+      await screen.findByText(
+        "Você iniciou o movimento de Desenvolvedor Back-end.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button", {
+        name: "Editar candidatura Desenvolvedor Back-end",
+      }),
+    ).toHaveLength(1);
+
+    await user.keyboard("{Escape}");
+    expect(
+      await screen.findByText(
+        "Movimento cancelado. A ordem anterior foi restaurada.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Desenvolvedor Back-end")).toHaveLength(1);
+    expect(repository.applications).toHaveLength(1);
   });
 
   it("solicita confirmação e exclui uma candidatura definitivamente", async () => {

@@ -206,6 +206,64 @@ describe("DexieApplicationsRepository", () => {
     ]);
   });
 
+  it("persiste reordenação dentro da mesma coluna", async () => {
+    const repository = new DexieApplicationsRepository(createDatabase());
+    const updatedAt = "2026-08-17T09:00:00.000Z";
+
+    await repository.create(createApplication("applied-1", "applied"));
+    await repository.create(createApplication("applied-2", "applied"));
+    await repository.create(createApplication("applied-3", "applied"));
+
+    await repository.moveById("applied-1", "applied", 2, updatedAt);
+
+    await expect(repository.list()).resolves.toMatchObject([
+      { id: "applied-2", position: 0, updatedAt },
+      { id: "applied-3", position: 1, updatedAt },
+      { id: "applied-1", position: 2, updatedAt },
+    ]);
+  });
+
+  it("persiste movimento para uma coluna vazia", async () => {
+    const repository = new DexieApplicationsRepository(createDatabase());
+
+    await repository.create(createApplication("applied-1", "applied"));
+    await repository.create(createApplication("applied-2", "applied"));
+    await repository.moveById(
+      "applied-1",
+      "closed",
+      0,
+      "2026-08-17T09:00:00.000Z",
+    );
+
+    await expect(repository.list()).resolves.toMatchObject([
+      { id: "applied-2", status: "applied", position: 0 },
+      { id: "applied-1", status: "closed", position: 0 },
+    ]);
+  });
+
+  it("restaura a ordem quando a persistência do movimento falha", async () => {
+    const database = createDatabase();
+    const repository = new DexieApplicationsRepository(database);
+    await repository.create(createApplication("applied-1", "applied"));
+    await repository.create(createApplication("applied-2", "applied"));
+    vi.spyOn(database.applications, "bulkPut").mockRejectedValueOnce(
+      new Error("Falha sintética no movimento"),
+    );
+
+    await expect(
+      repository.moveById(
+        "applied-1",
+        "applied",
+        1,
+        "2026-08-17T09:00:00.000Z",
+      ),
+    ).rejects.toThrow("Falha sintética no movimento");
+    await expect(repository.list()).resolves.toMatchObject([
+      { id: "applied-1", position: 0 },
+      { id: "applied-2", position: 1 },
+    ]);
+  });
+
   it("exclui e normaliza as posições restantes na mesma coluna", async () => {
     const repository = new DexieApplicationsRepository(createDatabase());
     const reorderedAt = "2026-08-17T09:00:00.000Z";

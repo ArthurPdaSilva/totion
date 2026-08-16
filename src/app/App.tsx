@@ -31,7 +31,11 @@ export function App({ repository = defaultRepository }: AppProps) {
     applications,
     status,
     addApplication,
+    beginApplicationMove,
+    cancelApplicationMove,
+    commitApplicationMove,
     editApplication,
+    previewApplicationMove,
     removeApplication,
     reload,
   } = useApplications(repository);
@@ -195,6 +199,10 @@ export function App({ repository = defaultRepository }: AppProps) {
           isLoading={status === "loading"}
           onRequestEdit={requestApplicationEdit}
           onRequestDelete={requestApplicationDeletion}
+          onMoveStart={beginApplicationMove}
+          onMovePreview={previewApplicationMove}
+          onMoveCommit={commitApplicationMove}
+          onMoveCancel={cancelApplicationMove}
         />
       </main>
 

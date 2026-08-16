@@ -4,9 +4,9 @@ Aplicação web para candidatos organizarem vagas e acompanharem cada candidatur
 
 ## Situação Do Projeto
 
-O projeto possui sua primeira fatia vertical implementada. A aplicação exibe o quadro responsivo com os três status, permite cadastrar, visualizar, editar e excluir candidaturas e persiste os registros no IndexedDB do navegador.
+O projeto possui sua primeira fatia vertical implementada. A aplicação exibe o quadro responsivo com os três status, permite cadastrar, visualizar, editar, excluir, mover e reordenar candidaturas e persiste os registros no IndexedDB do navegador.
 
-Drag-and-drop e importação ainda não foram implementados.
+A importação do CSV ainda não foi implementada.
 
 O repositório contém um CSV exportado do quadro usado atualmente no Notion. Ele servirá como referência de dados e, em uma etapa posterior, como origem para uma funcionalidade de importação.
 
@@ -77,6 +77,7 @@ Essa decisão permite validar a experiência principal antes de assumir custos d
 - React com TypeScript.
 - Vite para desenvolvimento e build.
 - Tailwind CSS com tokens semânticos definidos em CSS.
+- `@dnd-kit` para drag-and-drop acessível.
 - Dexie para acesso tipado ao IndexedDB e migrations.
 - React Hook Form para formulários.
 - Zod para validação e contratos.
@@ -85,9 +86,8 @@ Essa decisão permite validar a experiência principal antes de assumir custos d
 - Biome para lint e formatação.
 - npm como gerenciador de pacotes.
 
-Integrações previstas para as próximas etapas:
+Integração prevista para as próximas etapas:
 
-- `@dnd-kit` para drag-and-drop acessível.
 - Playwright para os fluxos críticos no navegador.
 
 Bibliotecas adicionais só devem ser incluídas quando houver uma necessidade concreta. Estado global de interface não deve ser adicionado enquanto estado local e composição de componentes forem suficientes.
@@ -127,7 +127,7 @@ Componentes não devem acessar o IndexedDB diretamente. A persistência ficará 
 - `createdAt`: instante de criação.
 - `updatedAt`: instante da última alteração.
 
-O schema inicial é criado por migration. A posição de uma nova candidatura é calculada e persistida na mesma transação do IndexedDB.
+O schema inicial é criado por migration. Criação, mudança de status e reordenação calculam e persistem as posições afetadas em transações do IndexedDB.
 
 ## Direção Visual
 
@@ -179,7 +179,7 @@ Esses itens exigem uma nova decisão de produto antes da implementação.
 - [x] Implementar cadastro e listagem de candidaturas.
 - [x] Implementar exclusão com confirmação.
 - [x] Implementar visualização e edição de candidaturas.
-- [ ] Implementar drag-and-drop entre status e reordenação.
+- [x] Implementar drag-and-drop entre status e reordenação.
 - [ ] Cobrir os fluxos críticos com testes.
 - [ ] Implementar importação assistida do CSV existente.
 - [ ] Avaliar exportação e backup dos dados locais.
@@ -202,6 +202,7 @@ Verificações de qualidade:
 npm run typecheck
 npm run biome:check
 npm test
+npm run test:e2e
 npm run build
 ```
 
@@ -215,7 +216,8 @@ O workflow valida os documentos obrigatórios, exige `package.json`, `package-lo
 2. `npm run typecheck`
 3. `npm run biome:check`
 4. `npm test`
-5. `npm run build`
+5. `npm run test:e2e`
+6. `npm run build`
 
 O deploy contínuo ainda não está configurado. O provedor e a estratégia de publicação serão definidos em uma decisão posterior.
 

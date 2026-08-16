@@ -1,5 +1,8 @@
 import { APPLICATION_STATUSES } from "../../features/applications/constants/applicationStatuses";
-import type { Application } from "../../features/applications/types/application";
+import type {
+  Application,
+  ApplicationStatus,
+} from "../../features/applications/types/application";
 import type { TotionDatabase } from "../database";
 
 export type ApplicationWithoutPosition = Omit<Application, "position">;
@@ -12,6 +15,12 @@ export interface ApplicationsRepository {
   list(): Promise<Application[]>;
   create(application: ApplicationWithoutPosition): Promise<Application>;
   updateById(id: string, update: ApplicationUpdate): Promise<Application[]>;
+  moveById(
+    id: string,
+    targetStatus: ApplicationStatus,
+    targetPosition: number,
+    updatedAt: string,
+  ): Promise<Application[]>;
   deleteById(id: string, reorderedAt: string): Promise<Application[]>;
 }
 
@@ -20,6 +29,39 @@ function normalizePositions(applications: Application[], updatedAt: string) {
     application.position === position
       ? []
       : [{ ...application, position, updatedAt }],
+  );
+}
+
+function insertApplication(
+  applications: Application[],
+  application: Application,
+  status: ApplicationStatus,
+  requestedPosition: number,
+  updatedAt: string,
+) {
+  const position = Math.max(
+    0,
+    Math.min(requestedPosition, applications.length),
+  );
+  const applicationsWithMoved = [...applications];
+  applicationsWithMoved.splice(position, 0, {
+    ...application,
+    status,
+    position,
+    updatedAt,
+  });
+
+  return applicationsWithMoved.flatMap((currentApplication, currentPosition) =>
+    currentApplication.id === application.id ||
+    currentApplication.position !== currentPosition
+      ? [
+          {
+            ...currentApplication,
+            position: currentPosition,
+            updatedAt,
+          },
+        ]
+      : [],
   );
 }
 
@@ -113,6 +155,64 @@ export class DexieApplicationsRepository implements ApplicationsRepository {
           ...normalizedTarget,
           updatedApplication,
         ];
+
+        await this.database.applications.bulkPut(changedApplications);
+        return changedApplications;
+      },
+    );
+  }
+
+  async moveById(
+    id: string,
+    targetStatus: ApplicationStatus,
+    targetPosition: number,
+    updatedAt: string,
+  ) {
+    return this.database.transaction(
+      "rw",
+      this.database.applications,
+      async () => {
+        const currentApplication = await this.database.applications.get(id);
+
+        if (!currentApplication) {
+          throw new Error("Candidatura não encontrada");
+        }
+
+        const sourceApplications = (
+          await this.database.applications
+            .where("status")
+            .equals(currentApplication.status)
+            .sortBy("position")
+        ).filter((application) => application.id !== id);
+
+        if (currentApplication.status === targetStatus) {
+          const changedApplications = insertApplication(
+            sourceApplications,
+            currentApplication,
+            targetStatus,
+            targetPosition,
+            updatedAt,
+          );
+          await this.database.applications.bulkPut(changedApplications);
+          return changedApplications;
+        }
+
+        const targetApplications = await this.database.applications
+          .where("status")
+          .equals(targetStatus)
+          .sortBy("position");
+        const normalizedSource = normalizePositions(
+          sourceApplications,
+          updatedAt,
+        );
+        const changedTarget = insertApplication(
+          targetApplications,
+          currentApplication,
+          targetStatus,
+          targetPosition,
+          updatedAt,
+        );
+        const changedApplications = [...normalizedSource, ...changedTarget];
 
         await this.database.applications.bulkPut(changedApplications);
         return changedApplications;

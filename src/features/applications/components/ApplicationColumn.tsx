@@ -1,10 +1,22 @@
+import { useDroppable } from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import type { KeyboardEvent } from "react";
 import { APPLICATION_STATUS_LABELS } from "../constants/applicationStatuses";
 import type { Application, ApplicationStatus } from "../types/application";
-import { ApplicationCard } from "./ApplicationCard";
+import { SortableApplicationCard } from "./SortableApplicationCard";
 
 type ApplicationColumnProps = {
   status: ApplicationStatus;
   applications: Application[];
+  isDragDisabled: boolean;
+  keyboardActiveId: string | null;
+  onKeyboardDragKeyDown: (
+    event: KeyboardEvent<HTMLButtonElement>,
+    application: Application,
+  ) => void;
   onRequestEdit: (application: Application, trigger: HTMLButtonElement) => void;
   onRequestDelete: (
     application: Application,
@@ -39,16 +51,24 @@ const STATUS_STYLES = {
 export function ApplicationColumn({
   status,
   applications,
+  isDragDisabled,
+  keyboardActiveId,
+  onKeyboardDragKeyDown,
   onRequestEdit,
   onRequestDelete,
 }: ApplicationColumnProps) {
   const label = APPLICATION_STATUS_LABELS[status];
   const styles = STATUS_STYLES[status];
   const headingId = `column-${status}`;
+  const { isOver, setNodeRef } = useDroppable({
+    id: `application-column:${status}`,
+    disabled: applications.length > 0,
+  });
 
   return (
     <section
-      className={`w-board-column shrink-0 snap-start rounded-panel border ${styles.border} ${styles.surface} p-3 sm:p-4`}
+      ref={setNodeRef}
+      className={`w-board-column shrink-0 snap-start rounded-panel border ${styles.border} ${styles.surface} p-3 transition sm:p-4 ${isOver ? "ring-3 ring-focus/20" : ""}`}
       aria-labelledby={headingId}
     >
       <header className="mb-4 flex min-h-8 items-center justify-between gap-3 px-1">
@@ -74,22 +94,30 @@ export function ApplicationColumn({
         </span>
       </header>
 
-      <div className="space-y-3">
-        {applications.length > 0 ? (
-          applications.map((application) => (
-            <ApplicationCard
-              key={application.id}
-              application={application}
-              onRequestEdit={onRequestEdit}
-              onRequestDelete={onRequestDelete}
-            />
-          ))
-        ) : (
-          <div className="flex min-h-32 items-center justify-center rounded-card border border-dashed border-line-strong bg-card/45 px-6 text-center text-sm leading-6 text-muted">
-            Nenhuma candidatura aqui ainda.
-          </div>
-        )}
-      </div>
+      <SortableContext
+        items={applications.map((application) => application.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="min-h-32 space-y-3">
+          {applications.length > 0 ? (
+            applications.map((application) => (
+              <SortableApplicationCard
+                key={application.id}
+                application={application}
+                isDragDisabled={isDragDisabled}
+                isKeyboardDragging={keyboardActiveId === application.id}
+                onKeyboardDragKeyDown={onKeyboardDragKeyDown}
+                onRequestEdit={onRequestEdit}
+                onRequestDelete={onRequestDelete}
+              />
+            ))
+          ) : (
+            <div className="flex min-h-32 items-center justify-center rounded-card border border-dashed border-line-strong bg-card/45 px-6 text-center text-sm leading-6 text-muted">
+              Nenhuma candidatura aqui ainda.
+            </div>
+          )}
+        </div>
+      </SortableContext>
     </section>
   );
 }

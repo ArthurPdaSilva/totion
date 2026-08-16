@@ -1,8 +1,10 @@
+import type { ReactNode } from "react";
 import { formatCivilDate } from "../../../shared/utils/civilDate";
 import type { Application } from "../types/application";
 
 type ApplicationCardProps = {
   application: Application;
+  dragHandle: ReactNode;
   onRequestEdit: (application: Application, trigger: HTMLButtonElement) => void;
   onRequestDelete: (
     application: Application,
@@ -12,6 +14,7 @@ type ApplicationCardProps = {
 
 export function ApplicationCard({
   application,
+  dragHandle,
   onRequestEdit,
   onRequestDelete,
 }: ApplicationCardProps) {
@@ -22,6 +25,7 @@ export function ApplicationCard({
           {application.name}
         </h3>
         <div className="flex shrink-0 items-center">
+          {dragHandle}
           <button
             id={`edit-application-${application.id}`}
             type="button"
