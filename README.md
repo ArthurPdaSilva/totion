@@ -83,12 +83,9 @@ Essa decisão permite validar a experiência principal antes de assumir custos d
 - Zod para validação e contratos.
 - Sonner encapsulado para notificações transitórias.
 - Vitest e React Testing Library para testes unitários e de componentes.
+- Playwright para os fluxos críticos no navegador em desktop e mobile.
 - Biome para lint e formatação.
 - npm como gerenciador de pacotes.
-
-Integração prevista para as próximas etapas:
-
-- Playwright para os fluxos críticos no navegador.
 
 Bibliotecas adicionais só devem ser incluídas quando houver uma necessidade concreta. Estado global de interface não deve ser adicionado enquanto estado local e composição de componentes forem suficientes.
 
@@ -180,7 +177,7 @@ Esses itens exigem uma nova decisão de produto antes da implementação.
 - [x] Implementar exclusão com confirmação.
 - [x] Implementar visualização e edição de candidaturas.
 - [x] Implementar drag-and-drop entre status e reordenação.
-- [ ] Cobrir os fluxos críticos com testes.
+- [x] Cobrir os fluxos críticos com testes.
 - [ ] Implementar importação assistida do CSV existente.
 - [ ] Avaliar exportação e backup dos dados locais.
 

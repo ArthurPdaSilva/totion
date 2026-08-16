@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { KeyboardEvent } from "react";
+import { type KeyboardEvent, useEffect, useRef } from "react";
 import type { Application } from "../types/application";
 import { ApplicationCard } from "./ApplicationCard";
 
@@ -27,6 +27,7 @@ export function SortableApplicationCard({
   onRequestEdit,
   onRequestDelete,
 }: SortableApplicationCardProps) {
+  const dragHandleRef = useRef<HTMLButtonElement>(null);
   const {
     attributes,
     listeners,
@@ -36,6 +37,12 @@ export function SortableApplicationCard({
     transition,
     isDragging,
   } = useSortable({ id: application.id, disabled: isDragDisabled });
+
+  useEffect(() => {
+    if (isKeyboardDragging) {
+      dragHandleRef.current?.focus();
+    }
+  }, [isKeyboardDragging]);
 
   return (
     <div
@@ -55,7 +62,10 @@ export function SortableApplicationCard({
         onRequestDelete={onRequestDelete}
         dragHandle={
           <button
-            ref={setActivatorNodeRef}
+            ref={(node) => {
+              dragHandleRef.current = node;
+              setActivatorNodeRef(node);
+            }}
             type="button"
             className="flex h-10 w-10 touch-none items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-canvas-deep hover:text-ink hover:opacity-100 focus-visible:opacity-100"
             title="Mover candidatura"

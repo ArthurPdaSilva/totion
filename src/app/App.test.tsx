@@ -20,6 +20,7 @@ class MemoryApplicationsRepository implements ApplicationsRepository {
   shouldFailCreation = false;
   shouldFailUpdate = false;
   shouldFailDeletion = false;
+  shouldFailMove = false;
 
   async list() {
     return [...this.applications];
@@ -75,6 +76,10 @@ class MemoryApplicationsRepository implements ApplicationsRepository {
     targetPosition: number,
     updatedAt: string,
   ) {
+    if (this.shouldFailMove) {
+      throw new Error("Falha sintética");
+    }
+
     const currentApplication = this.applications.find(
       (application) => application.id === id,
     );
@@ -365,6 +370,7 @@ describe("App", () => {
     const nameInput = screen.getByLabelText("Nome da vaga");
     await user.clear(nameInput);
     await user.type(nameInput, "Desenvolvedor Full Stack");
+    await user.selectOptions(screen.getByLabelText("Status"), "closed");
     await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
     expect(
@@ -372,7 +378,28 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(nameInput).toHaveValue("Desenvolvedor Full Stack");
+    expect(screen.getByLabelText("Status")).toHaveValue("closed");
+    expect(
+      screen.getByRole("button", { name: "Salvar alterações" }),
+    ).toBeEnabled();
     expect(repository.applications[0]?.name).toBe("Desenvolvedor Back-end");
+    expect(repository.applications[0]?.status).toBe("applied");
+
+    repository.shouldFailUpdate = false;
+    await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(
+      screen
+        .getByRole("region", { name: "Encerrada" })
+        .getElementsByTagName("article"),
+    ).toHaveLength(1);
+    expect(repository.applications[0]).toMatchObject({
+      name: "Desenvolvedor Full Stack",
+      status: "closed",
+    });
   });
 
   it("inicia e cancela o movimento pelo teclado", async () => {
@@ -406,6 +433,91 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByText("Desenvolvedor Back-end")).toHaveLength(1);
     expect(repository.applications).toHaveLength(1);
+  });
+
+  it("move pelo teclado para uma coluna vazia e mantém o foco", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    repository.applications = [createPersistedApplication()];
+    render(<App repository={repository} />);
+
+    const appliedColumn = await screen.findByRole("region", {
+      name: "Aplicada",
+    });
+    const progressColumn = screen.getByRole("region", {
+      name: "Em andamento",
+    });
+    const moveButton = within(appliedColumn).getByRole("button", {
+      name: "Mover candidatura Desenvolvedor Back-end",
+    });
+    moveButton.focus();
+    await user.keyboard(" ");
+    await user.keyboard("{ArrowRight}");
+
+    expect(
+      within(appliedColumn).queryByRole("article"),
+    ).not.toBeInTheDocument();
+    const destinationHandle = within(progressColumn).getByRole("button", {
+      name: "Mover candidatura Desenvolvedor Back-end",
+    });
+    expect(destinationHandle).toHaveFocus();
+    expect(
+      screen.getByText("Posição 1 de 1 em Em andamento."),
+    ).toBeInTheDocument();
+
+    await user.keyboard(" ");
+    expect(await screen.findByText("Movimento salvo.")).toBeInTheDocument();
+    expect(repository.applications[0]).toMatchObject({
+      status: "in_progress",
+      position: 0,
+    });
+  });
+
+  it("restaura visualmente a ordem quando o movimento falha", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    repository.applications = [
+      createPersistedApplication({ id: "application-1", name: "Primeira" }),
+      createPersistedApplication({
+        id: "application-2",
+        name: "Segunda",
+        position: 1,
+      }),
+    ];
+    repository.shouldFailMove = true;
+    render(<App repository={repository} />);
+
+    const appliedColumn = await screen.findByRole("region", {
+      name: "Aplicada",
+    });
+    const moveButton = within(appliedColumn).getByRole("button", {
+      name: "Mover candidatura Primeira",
+    });
+    moveButton.focus();
+    await user.keyboard(" ");
+    await user.keyboard("{ArrowDown}");
+    expect(
+      within(appliedColumn)
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["Segunda", "Primeira"]);
+
+    await user.keyboard(" ");
+
+    expect(
+      await screen.findByText(
+        "Não foi possível salvar. A ordem anterior foi restaurada.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(appliedColumn)
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["Primeira", "Segunda"]);
+    expect(repository.applications).toMatchObject([
+      { id: "application-1", position: 0 },
+      { id: "application-2", position: 1 },
+    ]);
   });
 
   it("solicita confirmação e exclui uma candidatura definitivamente", async () => {
@@ -486,6 +598,20 @@ describe("App", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Cancelar" })).toHaveFocus(),
     );
+    expect(
+      screen.getByRole("button", { name: "Excluir candidatura" }),
+    ).toBeEnabled();
     expect(repository.applications).toHaveLength(1);
+
+    repository.shouldFailDeletion = false;
+    await user.click(
+      screen.getByRole("button", { name: "Excluir candidatura" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(deleteButton).not.toBeInTheDocument();
+    expect(repository.applications).toHaveLength(0);
   });
 });

@@ -427,9 +427,10 @@ export function ApplicationBoard({
         onMoveCancel();
       }}
     >
-      <div
+      <section
         className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-5 sm:gap-5"
         aria-busy={isLoading || isCommitting}
+        aria-label="Quadro de candidaturas"
       >
         {APPLICATION_STATUSES.map((status) => {
           const applicationsInStatus = applications
@@ -449,7 +450,7 @@ export function ApplicationBoard({
             />
           );
         })}
-      </div>
+      </section>
       <DragOverlay dropAnimation={null} zIndex={60}>
         {activeId && activeApplication ? (
           <ApplicationDragOverlay application={activeApplication} />
