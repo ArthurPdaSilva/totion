@@ -1,4 +1,10 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import type {
@@ -11,6 +17,7 @@ import { App } from "./App";
 class MemoryApplicationsRepository implements ApplicationsRepository {
   applications: Application[] = [];
   shouldFailCreation = false;
+  shouldFailDeletion = false;
 
   async list() {
     return [...this.applications];
@@ -29,6 +36,67 @@ class MemoryApplicationsRepository implements ApplicationsRepository {
 
     return persistedApplication;
   }
+
+  async deleteById(id: string, reorderedAt: string) {
+    if (this.shouldFailDeletion) {
+      throw new Error("Falha sintética");
+    }
+
+    const deletedApplication = this.applications.find(
+      (application) => application.id === id,
+    );
+    this.applications = this.applications.filter(
+      (application) => application.id !== id,
+    );
+
+    if (!deletedApplication) {
+      return [];
+    }
+
+    const reorderedApplications: Application[] = [];
+    this.applications = this.applications.map((application) => {
+      if (application.status !== deletedApplication.status) {
+        return application;
+      }
+
+      const position = this.applications.filter(
+        (candidate) =>
+          candidate.status === application.status &&
+          candidate.position < application.position,
+      ).length;
+
+      if (application.position === position) {
+        return application;
+      }
+
+      const reorderedApplication = {
+        ...application,
+        position,
+        updatedAt: reorderedAt,
+      };
+      reorderedApplications.push(reorderedApplication);
+      return reorderedApplication;
+    });
+
+    return reorderedApplications;
+  }
+}
+
+function createPersistedApplication(
+  overrides: Partial<Application> = {},
+): Application {
+  return {
+    id: "application-1",
+    name: "Desenvolvedor Back-end",
+    status: "applied",
+    appliedAt: "2026-08-16",
+    jobUrl: null,
+    notes: null,
+    position: 0,
+    createdAt: "2026-08-16T12:00:00.000Z",
+    updatedAt: "2026-08-16T12:00:00.000Z",
+    ...overrides,
+  };
 }
 
 describe("App", () => {
@@ -132,5 +200,83 @@ describe("App", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(nameInput).toHaveValue("Analista de Sistemas");
     expect(repository.applications).toHaveLength(0);
+  });
+
+  it("solicita confirmação e exclui uma candidatura definitivamente", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    repository.applications = [createPersistedApplication()];
+    render(<App repository={repository} />);
+
+    const appliedColumn = await screen.findByRole("region", {
+      name: "Aplicada",
+    });
+    const deleteButton = within(appliedColumn).getByRole("button", {
+      name: "Excluir candidatura Desenvolvedor Back-end",
+    });
+
+    await user.click(deleteButton);
+    const confirmationDialog = screen.getByRole("dialog", {
+      name: "Excluir candidatura?",
+    });
+    expect(
+      within(confirmationDialog).getByText("Desenvolvedor Back-end"),
+    ).toBeInTheDocument();
+
+    fireEvent(confirmationDialog, new Event("cancel", { cancelable: true }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(deleteButton).toHaveFocus();
+    expect(repository.applications).toHaveLength(1);
+
+    await user.click(deleteButton);
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Excluir candidatura",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(
+      within(appliedColumn).queryByRole("article"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(appliedColumn).getByLabelText("0 candidaturas"),
+    ).toBeInTheDocument();
+    expect(
+      within(appliedColumn).getByRole("heading", { name: "Aplicada" }),
+    ).toHaveFocus();
+    expect(repository.applications).toHaveLength(0);
+  });
+
+  it("mantém o card quando a exclusão falha", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    repository.applications = [createPersistedApplication()];
+    repository.shouldFailDeletion = true;
+    render(<App repository={repository} />);
+
+    const deleteButton = await screen.findByRole("button", {
+      name: "Excluir candidatura Desenvolvedor Back-end",
+    });
+    await user.click(deleteButton);
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Excluir candidatura",
+      }),
+    );
+
+    expect(
+      await screen.findByText(/Não foi possível excluir a candidatura/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(deleteButton).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Cancelar" })).toHaveFocus(),
+    );
+    expect(repository.applications).toHaveLength(1);
   });
 });

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ApplicationsRepository } from "../../../database/repositories/applicationsRepository";
 import type { NewApplication } from "../schemas/applicationSchema";
 import { createApplication } from "../services/createApplication";
+import { deleteApplication } from "../services/deleteApplication";
 import type { Application } from "../types/application";
 
 type ApplicationsState =
@@ -57,6 +58,23 @@ export function useApplications(repository: ApplicationsRepository) {
     return application;
   }
 
+  async function removeApplication(id: string) {
+    const reorderedApplications = await deleteApplication(repository, id);
+    const reorderedApplicationsById = new Map(
+      reorderedApplications.map((application) => [application.id, application]),
+    );
+
+    setState((currentState) => ({
+      status: "ready",
+      applications: currentState.applications
+        .filter((application) => application.id !== id)
+        .map(
+          (application) =>
+            reorderedApplicationsById.get(application.id) ?? application,
+        ),
+    }));
+  }
+
   function reload() {
     setReloadKey((currentKey) => currentKey + 1);
   }
@@ -64,6 +82,7 @@ export function useApplications(repository: ApplicationsRepository) {
   return {
     ...state,
     addApplication,
+    removeApplication,
     reload,
   };
 }

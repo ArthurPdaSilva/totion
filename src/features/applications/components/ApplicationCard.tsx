@@ -3,14 +3,32 @@ import type { Application } from "../types/application";
 
 type ApplicationCardProps = {
   application: Application;
+  onRequestDelete: (
+    application: Application,
+    trigger: HTMLButtonElement,
+  ) => void;
 };
 
-export function ApplicationCard({ application }: ApplicationCardProps) {
+export function ApplicationCard({
+  application,
+  onRequestDelete,
+}: ApplicationCardProps) {
   return (
     <article className="group rounded-card border border-line bg-card p-4 shadow-card transition duration-200 ease-standard hover:-translate-y-0.5 hover:border-line-strong hover:shadow-card-hover motion-reduce:transform-none">
-      <h3 className="text-[0.9375rem] leading-6 font-semibold text-ink">
-        {application.name}
-      </h3>
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="pt-1 text-[0.9375rem] leading-6 font-semibold text-ink">
+          {application.name}
+        </h3>
+        <button
+          type="button"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-danger-soft hover:text-danger hover:opacity-100 focus-visible:opacity-100"
+          aria-label={`Excluir candidatura ${application.name}`}
+          title="Excluir candidatura"
+          onClick={(event) => onRequestDelete(application, event.currentTarget)}
+        >
+          <TrashIcon />
+        </button>
+      </div>
 
       <dl className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-3 text-xs text-muted">
         <div className="flex items-center gap-1.5">
@@ -89,6 +107,26 @@ function ExternalLinkIcon() {
         d="M14 5h5v5M19 5l-8 8M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"
         stroke="currentColor"
         strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <path
+        d="M4.5 7h15M9 7V4.5h6V7m2.5 0-.7 12.5H7.2L6.5 7M10 10.5v5.5M14 10.5v5.5"
+        stroke="currentColor"
+        strokeWidth="1.7"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

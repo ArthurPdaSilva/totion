@@ -6,7 +6,9 @@ import {
 } from "../database/repositories/applicationsRepository";
 import { ApplicationBoard } from "../features/applications/components/ApplicationBoard";
 import { ApplicationFormDialog } from "../features/applications/components/ApplicationFormDialog";
+import { DeleteApplicationDialog } from "../features/applications/components/DeleteApplicationDialog";
 import { useApplications } from "../features/applications/hooks/useApplications";
+import type { Application } from "../features/applications/types/application";
 
 const defaultRepository = new DexieApplicationsRepository(database);
 
@@ -16,13 +18,46 @@ type AppProps = {
 
 export function App({ repository = defaultRepository }: AppProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [applicationToDelete, setApplicationToDelete] =
+    useState<Application | null>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
-  const { applications, status, addApplication, reload } =
+  const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
+  const { applications, status, addApplication, removeApplication, reload } =
     useApplications(repository);
 
   function closeForm() {
     setIsFormOpen(false);
     queueMicrotask(() => createButtonRef.current?.focus());
+  }
+
+  function requestApplicationDeletion(
+    application: Application,
+    trigger: HTMLButtonElement,
+  ) {
+    deleteButtonRef.current = trigger;
+    setApplicationToDelete(application);
+  }
+
+  function cancelApplicationDeletion() {
+    setApplicationToDelete(null);
+    queueMicrotask(() => deleteButtonRef.current?.focus());
+  }
+
+  function finishApplicationDeletion() {
+    const deletedApplicationStatus = applicationToDelete?.status;
+    setApplicationToDelete(null);
+    deleteButtonRef.current = null;
+    queueMicrotask(() => {
+      const columnHeading = deletedApplicationStatus
+        ? document.getElementById(`column-${deletedApplicationStatus}`)
+        : null;
+
+      if (columnHeading instanceof HTMLElement) {
+        columnHeading.focus();
+      } else {
+        createButtonRef.current?.focus();
+      }
+    });
   }
 
   return (
@@ -120,11 +155,21 @@ export function App({ repository = defaultRepository }: AppProps) {
         <ApplicationBoard
           applications={applications}
           isLoading={status === "loading"}
+          onRequestDelete={requestApplicationDeletion}
         />
       </main>
 
       {isFormOpen ? (
         <ApplicationFormDialog onClose={closeForm} onCreate={addApplication} />
+      ) : null}
+
+      {applicationToDelete ? (
+        <DeleteApplicationDialog
+          application={applicationToDelete}
+          onCancel={cancelApplicationDeletion}
+          onDelete={() => removeApplication(applicationToDelete.id)}
+          onDeleted={finishApplicationDeletion}
+        />
       ) : null}
     </div>
   );

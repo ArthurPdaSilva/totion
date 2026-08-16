@@ -6,7 +6,7 @@ Totion é uma aplicação web local-first para candidatos acompanharem vagas em 
 
 Toda interface, mensagem de validação e texto apresentado ao usuário deve estar em português brasileiro. Nomes técnicos, identificadores e código devem estar em inglês.
 
-A primeira fatia vertical de criação e listagem está implementada. Não trate edição, exclusão, drag-and-drop ou importação como funcionalidades existentes.
+A primeira fatia vertical de criação, listagem e exclusão está implementada. Não trate edição, drag-and-drop ou importação como funcionalidades existentes.
 
 ## Fonte De Verdade
 

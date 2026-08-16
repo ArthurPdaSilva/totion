@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { TotionDatabase } from "../database";
 import {
   type ApplicationWithoutPosition,
@@ -79,6 +79,51 @@ describe("DexieApplicationsRepository", () => {
 
     await expect(reopenedRepository.list()).resolves.toMatchObject([
       { id: "persisted", status: "closed", position: 0 },
+    ]);
+  });
+
+  it("exclui e normaliza as posições restantes na mesma coluna", async () => {
+    const repository = new DexieApplicationsRepository(createDatabase());
+    const reorderedAt = "2026-08-17T09:00:00.000Z";
+
+    await repository.create(createApplication("applied-1", "applied"));
+    await repository.create(createApplication("applied-2", "applied"));
+    await repository.create(createApplication("applied-3", "applied"));
+    await repository.create(createApplication("closed-1", "closed"));
+
+    await repository.deleteById("applied-2", reorderedAt);
+
+    await expect(repository.list()).resolves.toMatchObject([
+      {
+        id: "applied-1",
+        position: 0,
+        updatedAt: "2026-08-16T12:00:00.000Z",
+      },
+      { id: "applied-3", position: 1, updatedAt: reorderedAt },
+      {
+        id: "closed-1",
+        position: 0,
+        updatedAt: "2026-08-16T12:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("restaura a exclusão quando a normalização de posições falha", async () => {
+    const database = createDatabase();
+    const repository = new DexieApplicationsRepository(database);
+
+    await repository.create(createApplication("applied-1", "applied"));
+    await repository.create(createApplication("applied-2", "applied"));
+    vi.spyOn(database.applications, "bulkPut").mockRejectedValueOnce(
+      new Error("Falha sintética na normalização"),
+    );
+
+    await expect(
+      repository.deleteById("applied-1", "2026-08-17T09:00:00.000Z"),
+    ).rejects.toThrow("Falha sintética na normalização");
+    await expect(repository.list()).resolves.toMatchObject([
+      { id: "applied-1", position: 0 },
+      { id: "applied-2", position: 1 },
     ]);
   });
 });

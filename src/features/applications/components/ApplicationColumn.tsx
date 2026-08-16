@@ -5,6 +5,10 @@ import { ApplicationCard } from "./ApplicationCard";
 type ApplicationColumnProps = {
   status: ApplicationStatus;
   applications: Application[];
+  onRequestDelete: (
+    application: Application,
+    trigger: HTMLButtonElement,
+  ) => void;
 };
 
 const STATUS_STYLES = {
@@ -34,6 +38,7 @@ const STATUS_STYLES = {
 export function ApplicationColumn({
   status,
   applications,
+  onRequestDelete,
 }: ApplicationColumnProps) {
   const label = APPLICATION_STATUS_LABELS[status];
   const styles = STATUS_STYLES[status];
@@ -53,6 +58,7 @@ export function ApplicationColumn({
           <h2
             id={headingId}
             className="font-display text-lg font-bold tracking-[-0.015em] text-ink"
+            tabIndex={-1}
           >
             {label}
           </h2>
@@ -69,7 +75,11 @@ export function ApplicationColumn({
       <div className="space-y-3">
         {applications.length > 0 ? (
           applications.map((application) => (
-            <ApplicationCard key={application.id} application={application} />
+            <ApplicationCard
+              key={application.id}
+              application={application}
+              onRequestDelete={onRequestDelete}
+            />
           ))
         ) : (
           <div className="flex min-h-32 items-center justify-center rounded-card border border-dashed border-line-strong bg-card/45 px-6 text-center text-sm leading-6 text-muted">

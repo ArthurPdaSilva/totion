@@ -5,11 +5,16 @@ import { ApplicationColumn } from "./ApplicationColumn";
 type ApplicationBoardProps = {
   applications: Application[];
   isLoading: boolean;
+  onRequestDelete: (
+    application: Application,
+    trigger: HTMLButtonElement,
+  ) => void;
 };
 
 export function ApplicationBoard({
   applications,
   isLoading,
+  onRequestDelete,
 }: ApplicationBoardProps) {
   return (
     <div
@@ -26,6 +31,7 @@ export function ApplicationBoard({
             key={status}
             status={status}
             applications={applicationsInStatus}
+            onRequestDelete={onRequestDelete}
           />
         );
       })}
