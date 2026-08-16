@@ -1,0 +1,54 @@
+@theme {
+  --font-sans: "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-display: Georgia, "Times New Roman", ui-serif, serif;
+
+  --color-canvas: #f3f0e8;
+  --color-canvas-deep: #e8e1d3;
+  --color-panel: #fbfaf6;
+  --color-card: #ffffff;
+  --color-ink: #272822;
+  --color-muted: #6f7067;
+  --color-subtle: #929185;
+  --color-line: #dcd7ca;
+  --color-line-strong: #c8c0b1;
+
+  --color-brand: #bb4d36;
+  --color-brand-hover: #9f3d2a;
+  --color-brand-soft: #f6e3dd;
+
+  --color-applied: #a33f31;
+  --color-applied-soft: #f8e6e1;
+  --color-applied-line: #e7b8ad;
+  --color-progress: #7b6018;
+  --color-progress-soft: #f7efd5;
+  --color-progress-line: #dfcd8f;
+  --color-closed: #5f574f;
+  --color-closed-soft: #ece7e1;
+  --color-closed-line: #cfc3b7;
+
+  --color-focus: #225f91;
+  --color-danger: #a83229;
+  --color-danger-soft: #fbe8e6;
+
+  --radius-button: 0.625rem;
+  --radius-card: 0.875rem;
+  --radius-panel: 1.25rem;
+  --radius-dialog: 1.5rem;
+
+  --shadow-card: 0 1px 2px rgb(42 38 30 / 7%), 0 8px 24px rgb(42 38 30 / 4%);
+  --shadow-card-hover:
+    0 2px 4px rgb(42 38 30 / 8%), 0 14px 30px rgb(42 38 30 / 9%);
+  --shadow-dialog: 0 30px 90px rgb(35 31 24 / 24%);
+
+  --spacing-board-column: 20rem;
+  --container-content: 96rem;
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+:root {
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --layer-header: 10;
+  --layer-dialog: 50;
+}

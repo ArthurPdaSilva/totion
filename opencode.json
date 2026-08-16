@@ -1,9 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": [
-    "README.md",
-    "AGENTS.md"
-  ],
+  "instructions": ["README.md", "AGENTS.md"],
   "share": "disabled",
   "agent": {
     "product": {

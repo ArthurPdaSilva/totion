@@ -6,7 +6,7 @@ Totion é uma aplicação web local-first para candidatos acompanharem vagas em 
 
 Toda interface, mensagem de validação e texto apresentado ao usuário deve estar em português brasileiro. Nomes técnicos, identificadores e código devem estar em inglês.
 
-O projeto está na fase de documentação. Não trate itens planejados no `README.md` como funcionalidades já implementadas.
+A primeira fatia vertical de criação e listagem está implementada. Não trate edição, exclusão, drag-and-drop ou importação como funcionalidades existentes.
 
 ## Fonte De Verdade
 
@@ -98,6 +98,7 @@ A estratégia de `position` deve permitir inserções e reordenações consisten
 
 - React e TypeScript.
 - Vite.
+- Tailwind CSS com configuração CSS-first.
 - `@dnd-kit`.
 - Dexie e IndexedDB.
 - React Hook Form.
@@ -118,7 +119,7 @@ Antes de instalar, confirme versões estáveis e compatíveis. Não fixe na docu
 - Usar `npm ci` no CI e em instalações reproduzíveis.
 - Não instalar uma biblioteca se a plataforma ou uma função pequena e bem testada resolver o problema.
 
-## Arquitetura Planejada
+## Arquitetura Atual
 
 ```text
 src/
@@ -134,12 +135,9 @@ src/
     migrations/           # Versões do IndexedDB
     repositories/         # Persistência e consultas
   shared/
-    components/           # Componentes reutilizáveis
     utils/                # Funções puras
   styles/                 # Tokens e estilos globais
-  types/                  # Tipos compartilhados
-tests/
-  e2e/
+  test/                   # Configuração do ambiente de testes
 ```
 
 Evite criar camadas vazias antecipadamente. A estrutura deve crescer conforme existirem responsabilidades reais.
@@ -192,7 +190,10 @@ Limites máximos de texto devem ser decididos e testados antes da implementaçã
 ## Interface E Acessibilidade
 
 - Preservar uma identidade visual própria em vez de copiar o Notion.
-- Usar tokens para cores, tipografia, espaçamento, bordas, sombras e camadas.
+- Usar os tokens de `src/styles/theme.css` para cores, tipografia, espaçamento, bordas, sombras e camadas.
+- Preferir classes Tailwind semânticas e não espalhar cores arbitrárias pelos componentes.
+- Manter as classes completas em mapeamentos por status; não construir nomes Tailwind dinamicamente.
+- Manter constantes de negócio fora dos arquivos de estilo.
 - Garantir contraste conforme WCAG AA.
 - Manter foco visível e ordem de tabulação coerente.
 - Botões de ícone precisam de nome acessível.
@@ -251,7 +252,7 @@ Não teste detalhes internos do `dnd-kit`. Teste o comportamento do domínio em 
 
 Depois de alterações, execute os scripts disponíveis de typecheck, Biome e testes. Quando o projeto ainda não possuir esses scripts, registre essa limitação sem inventar comandos bem-sucedidos.
 
-O workflow `.github/workflows/ci.yml` valida os documentos obrigatórios durante a fase inicial. Depois da criação de `package.json`, ele também deve instalar com `npm ci` e executar typecheck, Biome, testes e build. Não enfraqueça ou ignore essas etapas para contornar uma falha.
+O workflow `.github/workflows/ci.yml` valida os documentos e arquivos obrigatórios, instala com `npm ci` e executa typecheck, Biome, testes e build. Não enfraqueça ou ignore essas etapas para contornar uma falha.
 
 ## Fluxo De Trabalho Dos Agentes
 

@@ -1,0 +1,136 @@
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
+import type {
+  ApplicationsRepository,
+  ApplicationWithoutPosition,
+} from "../database/repositories/applicationsRepository";
+import type { Application } from "../features/applications/types/application";
+import { App } from "./App";
+
+class MemoryApplicationsRepository implements ApplicationsRepository {
+  applications: Application[] = [];
+  shouldFailCreation = false;
+
+  async list() {
+    return [...this.applications];
+  }
+
+  async create(application: ApplicationWithoutPosition) {
+    if (this.shouldFailCreation) {
+      throw new Error("Falha sintética");
+    }
+
+    const position = this.applications.filter(
+      (currentApplication) => currentApplication.status === application.status,
+    ).length;
+    const persistedApplication = { ...application, position };
+    this.applications.push(persistedApplication);
+
+    return persistedApplication;
+  }
+}
+
+describe("App", () => {
+  it("renderiza as três colunas e cria uma candidatura persistida", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    render(<App repository={repository} />);
+
+    const appliedColumn = await screen.findByRole("region", {
+      name: "Aplicada",
+    });
+    const progressColumn = screen.getByRole("region", { name: "Em andamento" });
+    const closedColumn = screen.getByRole("region", { name: "Encerrada" });
+
+    expect(
+      within(appliedColumn).getByLabelText("0 candidaturas"),
+    ).toBeInTheDocument();
+    expect(
+      within(progressColumn).getByLabelText("0 candidaturas"),
+    ).toBeInTheDocument();
+    expect(
+      within(closedColumn).getByLabelText("0 candidaturas"),
+    ).toBeInTheDocument();
+
+    const createButton = screen.getByRole("button", {
+      name: "Nova candidatura",
+    });
+    await user.click(createButton);
+
+    expect(
+      screen.getByRole("dialog", { name: "Adicionar candidatura" }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Salvar candidatura" }),
+    );
+    expect(
+      await screen.findByText("Informe o nome da vaga"),
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByLabelText("Nome da vaga"),
+      "Desenvolvedor React",
+    );
+    await user.selectOptions(screen.getByLabelText("Status"), "in_progress");
+    await user.clear(screen.getByLabelText("Aplicado em"));
+    await user.type(screen.getByLabelText("Aplicado em"), "2026-08-16");
+    await user.type(
+      screen.getByLabelText(/Link da vaga/),
+      "https://empresa.example/vagas/react",
+    );
+    await user.type(
+      screen.getByLabelText(/Anotações/),
+      "Retorno esperado na próxima semana",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Salvar candidatura" }),
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(createButton).toHaveFocus();
+
+    const createdCard = within(progressColumn).getByRole("article");
+    expect(
+      within(createdCard).getByText("Desenvolvedor React"),
+    ).toBeInTheDocument();
+    expect(within(createdCard).getByText("16/08/2026")).toBeInTheDocument();
+    expect(
+      within(progressColumn).getByLabelText("1 candidatura"),
+    ).toBeInTheDocument();
+    expect(within(createdCard).getByText("Com anotações")).toBeInTheDocument();
+
+    const jobLink = within(createdCard).getByRole("link", {
+      name: "Abrir vaga Desenvolvedor React em uma nova aba",
+    });
+    expect(jobLink).toHaveAttribute("target", "_blank");
+    expect(jobLink).toHaveAttribute("rel", "noopener noreferrer");
+    expect(repository.applications).toHaveLength(1);
+  });
+
+  it("mantém o formulário preenchido quando a persistência falha", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    repository.shouldFailCreation = true;
+    render(<App repository={repository} />);
+
+    await screen.findByRole("region", { name: "Aplicada" });
+    await user.click(screen.getByRole("button", { name: "Nova candidatura" }));
+
+    const nameInput = screen.getByLabelText("Nome da vaga");
+    await user.type(nameInput, "Analista de Sistemas");
+    await user.click(
+      screen.getByRole("button", { name: "Salvar candidatura" }),
+    );
+
+    expect(
+      await screen.findByText(/Não foi possível salvar a candidatura/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(nameInput).toHaveValue("Analista de Sistemas");
+    expect(repository.applications).toHaveLength(0);
+  });
+});

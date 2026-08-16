@@ -4,7 +4,9 @@ Aplicação web para candidatos organizarem vagas e acompanharem cada candidatur
 
 ## Situação Do Projeto
 
-O projeto está na fase de definição do produto. A aplicação ainda não foi iniciada; este documento registra o escopo e as decisões planejadas para o MVP.
+O projeto possui sua primeira fatia vertical implementada. A aplicação exibe o quadro responsivo com os três status, permite cadastrar candidaturas por um formulário validado e persiste os registros no IndexedDB do navegador.
+
+Edição, exclusão, drag-and-drop e importação ainda não foram implementados.
 
 O repositório contém um CSV exportado do quadro usado atualmente no Notion. Ele servirá como referência de dados e, em uma etapa posterior, como origem para uma funcionalidade de importação.
 
@@ -70,57 +72,58 @@ O MVP será local-first e não terá backend, conta de usuário ou sincronizaç�
 
 Essa decisão permite validar a experiência principal antes de assumir custos de infraestrutura. Até que exista exportação ou sincronização, limpar os dados do navegador pode remover todas as candidaturas.
 
-## Tecnologias Planejadas
+## Tecnologias
 
 - React com TypeScript.
 - Vite para desenvolvimento e build.
-- `@dnd-kit` para drag-and-drop acessível.
+- Tailwind CSS com tokens semânticos definidos em CSS.
 - Dexie para acesso tipado ao IndexedDB e migrations.
 - React Hook Form para formulários.
 - Zod para validação e contratos.
 - Vitest e React Testing Library para testes unitários e de componentes.
-- Playwright para os fluxos críticos no navegador.
 - Biome para lint e formatação.
 - npm como gerenciador de pacotes.
 
+Integrações previstas para as próximas etapas:
+
+- `@dnd-kit` para drag-and-drop acessível.
+- Playwright para os fluxos críticos no navegador.
+
 Bibliotecas adicionais só devem ser incluídas quando houver uma necessidade concreta. Estado global de interface não deve ser adicionado enquanto estado local e composição de componentes forem suficientes.
 
-## Arquitetura Planejada
+## Estrutura Atual
 
 ```text
 src/
-  app/                    # Composição da aplicação e providers
+  app/                    # Composição e teste do fluxo principal
   features/
-    applications/         # Quadro, cards, formulário e regras de candidatura
+    applications/         # Quadro, cards, formulário, validação e regras
   database/
     migrations/           # Versões do banco local
     repositories/         # Leitura e persistência no IndexedDB
   shared/
-    components/           # Componentes reutilizáveis
     utils/                # Funções puras e utilitários
   styles/                 # Tokens e estilos globais
-  types/                  # Tipos compartilhados
-tests/
-  e2e/                    # Fluxos críticos no navegador
+  test/                   # Configuração do ambiente de testes
 ```
 
 Componentes não devem acessar o IndexedDB diretamente. A persistência ficará nos repositories, e as operações que alteram status e ordem serão coordenadas por um serviço de domínio.
 
-## Modelo De Dados Planejado
+## Modelo De Dados
 
 ### `applications`
 
 - `id`: identificador único.
 - `name`: nome da vaga.
 - `status`: `applied`, `in_progress` ou `closed`.
-- `applied_at`: data no formato `YYYY-MM-DD`.
-- `job_url`: link opcional da vaga.
+- `appliedAt`: data no formato `YYYY-MM-DD`.
+- `jobUrl`: link opcional da vaga.
 - `notes`: anotações opcionais.
 - `position`: chave usada para ordenar o card dentro do status.
-- `created_at`: instante de criação.
-- `updated_at`: instante da última alteração.
+- `createdAt`: instante de criação.
+- `updatedAt`: instante da última alteração.
 
-O schema definitivo será criado por migrations. Alterações de status e posição devem ocorrer em uma única transação do IndexedDB.
+O schema inicial é criado por migration. A posição de uma nova candidatura é calculada e persistida na mesma transação do IndexedDB.
 
 ## Direção Visual
 
@@ -165,11 +168,12 @@ Esses itens exigem uma nova decisão de produto antes da implementação.
 
 - [x] Definir visão, escopo e regras do MVP.
 - [x] Configurar Git e o workflow inicial de integração contínua.
-- [ ] Criar a base React, TypeScript e Vite.
-- [ ] Configurar qualidade, testes e integração contínua.
-- [ ] Criar tokens visuais e layout responsivo do quadro.
-- [ ] Implementar o banco local e suas migrations.
-- [ ] Implementar cadastro, edição e exclusão de candidaturas.
+- [x] Criar a base React, TypeScript e Vite.
+- [x] Configurar qualidade, testes e integração contínua.
+- [x] Criar tokens visuais e layout responsivo do quadro.
+- [x] Implementar o banco local e a migration inicial.
+- [x] Implementar cadastro e listagem de candidaturas.
+- [ ] Implementar edição e exclusão de candidaturas.
 - [ ] Implementar drag-and-drop entre status e reordenação.
 - [ ] Cobrir os fluxos críticos com testes.
 - [ ] Implementar importação assistida do CSV existente.
@@ -177,13 +181,30 @@ Esses itens exigem uma nova decisão de produto antes da implementação.
 
 ## Como Executar
 
-Os comandos serão adicionados depois da criação da base da aplicação. O projeto usará npm exclusivamente e manterá o `package-lock.json` versionado.
+Requisitos locais:
+
+- Node.js 22.22.2 ou superior.
+- npm.
+
+```bash
+npm install
+npm run dev
+```
+
+Verificações de qualidade:
+
+```bash
+npm run typecheck
+npm run biome:check
+npm test
+npm run build
+```
 
 ## Integração Contínua
 
 O workflow [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) é executado em pull requests e em pushes para `main`.
 
-Enquanto o projeto estiver somente na fase de documentação, ele valida a presença e a consistência de `README.md`, `AGENTS.md` e `opencode.json`. Assim que `package.json` for adicionado, o workflow também exigirá `package-lock.json` e os scripts `build`, `typecheck`, `biome:check` e `test`, executando:
+O workflow valida os documentos obrigatórios, exige `package.json`, `package-lock.json` e os scripts `build`, `typecheck`, `biome:check` e `test`, executando:
 
 1. `npm ci`
 2. `npm run typecheck`
@@ -191,7 +212,7 @@ Enquanto o projeto estiver somente na fase de documentação, ele valida a prese
 4. `npm test`
 5. `npm run build`
 
-O deploy contínuo ainda não está configurado. O provedor e a estratégia de publicação serão definidos depois que a base web estiver criada.
+O deploy contínuo ainda não está configurado. O provedor e a estratégia de publicação serão definidos em uma decisão posterior.
 
 ## Documentação Para Desenvolvimento
 
