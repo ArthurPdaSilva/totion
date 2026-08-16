@@ -29,6 +29,7 @@ O usuário poderá:
 - Criar, visualizar, editar e excluir uma candidatura.
 - Arrastar uma candidatura entre colunas para alterar seu status.
 - Reordenar candidaturas dentro da mesma coluna.
+- Renderizar inicialmente cinco cards por coluna e carregar os próximos lotes conforme a rolagem se aproxima do fim.
 - Abrir o link da vaga em uma nova aba.
 - Usar o quadro em telas desktop e mobile.
 
@@ -131,6 +132,7 @@ O schema inicial é criado por migration. Criação, mudança de status e reorde
 - Cada status terá cor de apoio distinta, mantendo contraste adequado.
 - Cards devem priorizar nome, data e acesso ao link sem exibir anotações longas por completo.
 - No mobile, as colunas poderão ser navegadas horizontalmente sem quebrar o drag-and-drop.
+- Colunas longas devem manter apenas lotes progressivos de cards montados para reduzir o custo do drag-and-drop.
 - Estados de foco, hover, arraste, vazio, carregamento e erro devem ser explícitos.
 - A interface e todas as mensagens apresentadas ao usuário serão em português brasileiro.
 

@@ -260,6 +260,72 @@ describe("App", () => {
     expect(repository.applications).toHaveLength(1);
   });
 
+  it("renderiza cinco cards por coluna e carrega o próximo lote", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    repository.applications = Array.from({ length: 7 }, (_, position) =>
+      createPersistedApplication({
+        id: `application-${position + 1}`,
+        name: `Vaga ${position + 1}`,
+        position,
+      }),
+    );
+    render(<App repository={repository} />);
+
+    const appliedColumn = await screen.findByRole("region", {
+      name: "Aplicada",
+    });
+    expect(within(appliedColumn).getAllByRole("article")).toHaveLength(5);
+    expect(
+      within(appliedColumn).getByLabelText("7 candidaturas"),
+    ).toBeInTheDocument();
+    expect(
+      within(appliedColumn).getByText("Mostrando 5 de 7"),
+    ).toBeInTheDocument();
+    expect(within(appliedColumn).queryByText("Vaga 6")).not.toBeInTheDocument();
+
+    await user.click(
+      within(appliedColumn).getByRole("button", { name: "Carregar mais" }),
+    );
+
+    expect(within(appliedColumn).getAllByRole("article")).toHaveLength(7);
+    expect(within(appliedColumn).getByText("Vaga 7")).toBeInTheDocument();
+    expect(
+      within(appliedColumn).queryByText(/Mostrando/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("mantém o card ativo montado ao atravessar o limite do lote", async () => {
+    const user = userEvent.setup();
+    const repository = new MemoryApplicationsRepository();
+    repository.applications = Array.from({ length: 6 }, (_, position) =>
+      createPersistedApplication({
+        id: `application-${position + 1}`,
+        name: `Vaga ${position + 1}`,
+        position,
+      }),
+    );
+    render(<App repository={repository} />);
+
+    const appliedColumn = await screen.findByRole("region", {
+      name: "Aplicada",
+    });
+    const fifthMoveButton = within(appliedColumn).getByRole("button", {
+      name: "Mover candidatura Vaga 5",
+    });
+    fifthMoveButton.focus();
+    await user.keyboard(" ");
+    await user.keyboard("{ArrowDown}");
+
+    expect(within(appliedColumn).getAllByRole("article")).toHaveLength(6);
+    expect(fifthMoveButton).toHaveFocus();
+    expect(within(appliedColumn).getByText("Vaga 6")).toBeInTheDocument();
+
+    await user.keyboard(" ");
+    expect(await screen.findByText("Movimento salvo.")).toBeInTheDocument();
+    expect(within(appliedColumn).getAllByRole("article")).toHaveLength(6);
+  });
+
   it("mantém o formulário preenchido quando a persistência falha", async () => {
     const user = userEvent.setup();
     const repository = new MemoryApplicationsRepository();

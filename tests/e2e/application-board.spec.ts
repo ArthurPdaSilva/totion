@@ -300,6 +300,46 @@ test("restaura um backup próprio após revisar as três colunas", async ({
   await expect(page.getByText("Pessoa Desenvolvedora Mobile")).toBeVisible();
 });
 
+test("carrega mais cards ao alcançar o fim da coluna", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Backup" }).click();
+  const applications = Array.from({ length: 7 }, (_, position) => ({
+    id: `application-${position + 1}`,
+    name: `Vaga virtualizada ${position + 1}`,
+    status: "applied",
+    appliedAt: "2026-08-16",
+    jobUrl: null,
+    notes: null,
+    position,
+    createdAt: "2026-08-16T12:00:00.000Z",
+    updatedAt: "2026-08-16T12:00:00.000Z",
+  }));
+  await page.getByLabel("Arquivo Totion").setInputFiles({
+    name: "candidaturas-virtualizadas.totion",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        format: "totion",
+        version: 1,
+        exportedAt: "2026-08-16T15:00:00.000Z",
+        applications,
+      }),
+    ),
+  });
+  await page
+    .getByLabel("Entendo que o quadro atual será substituído por este backup.")
+    .check();
+  await page.getByRole("button", { name: "Restaurar 7 candidaturas" }).click();
+
+  const appliedColumn = page.getByRole("region", { name: "Aplicada" });
+  await expect(appliedColumn.getByRole("article")).toHaveCount(5);
+  await expect(appliedColumn.getByText("Mostrando 5 de 7")).toBeAttached();
+  await appliedColumn.getByText("Mostrando 5 de 7").scrollIntoViewIfNeeded();
+
+  await expect(appliedColumn.getByRole("article")).toHaveCount(7);
+  await expect(appliedColumn.getByText("Vaga virtualizada 7")).toBeVisible();
+});
+
 test("quebra nomes longos sem ultrapassar os limites do card", async ({
   page,
 }) => {

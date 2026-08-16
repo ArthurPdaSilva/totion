@@ -63,6 +63,8 @@ Não adicionar novos status, status personalizados ou transições especiais sem
 - O card não deve iniciar um arraste quando o usuário interagir com link, menu, botão ou campo editável.
 - O overlay de arraste não deve duplicar identificadores HTML nem aceitar interação.
 - Colunas vazias devem continuar sendo destinos válidos.
+- Colunas renderizam inicialmente cinco cards e carregam novos lotes de cinco ao se aproximarem do fim; contagem, ordenação e persistência continuam considerando a lista completa.
+- O card ativo deve permanecer montado quando um movimento atravessar o limite do lote visível.
 
 A estratégia de `position` deve permitir inserções e reordenações consistentes. Se a implementação usar posições fracionárias, inclua normalização determinística quando o espaço entre valores se tornar insuficiente. Se usar índices inteiros, regrave a coluna afetada em uma única transação.
 

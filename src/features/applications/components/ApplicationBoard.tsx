@@ -442,6 +442,8 @@ export function ApplicationBoard({
               key={status}
               status={status}
               applications={applicationsInStatus}
+              activeApplicationId={activeId ?? keyboardActiveId}
+              isDragActive={Boolean(activeId ?? keyboardActiveId)}
               isDragDisabled={isCommitting}
               keyboardActiveId={keyboardActiveId}
               onKeyboardDragKeyDown={handleKeyboardDragKeyDown}

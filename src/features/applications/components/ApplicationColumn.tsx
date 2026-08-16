@@ -3,7 +3,13 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import type { KeyboardEvent } from "react";
+import {
+  type KeyboardEvent,
+  startTransition,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { APPLICATION_STATUS_LABELS } from "../constants/applicationStatuses";
 import type { Application, ApplicationStatus } from "../types/application";
 import { SortableApplicationCard } from "./SortableApplicationCard";
@@ -11,6 +17,8 @@ import { SortableApplicationCard } from "./SortableApplicationCard";
 type ApplicationColumnProps = {
   status: ApplicationStatus;
   applications: Application[];
+  activeApplicationId: string | null;
+  isDragActive: boolean;
   isDragDisabled: boolean;
   keyboardActiveId: string | null;
   onKeyboardDragKeyDown: (
@@ -23,6 +31,8 @@ type ApplicationColumnProps = {
     trigger: HTMLButtonElement,
   ) => void;
 };
+
+const APPLICATIONS_BATCH_SIZE = 5;
 
 const STATUS_STYLES = {
   applied: {
@@ -51,19 +61,78 @@ const STATUS_STYLES = {
 export function ApplicationColumn({
   status,
   applications,
+  activeApplicationId,
+  isDragActive,
   isDragDisabled,
   keyboardActiveId,
   onKeyboardDragKeyDown,
   onRequestEdit,
   onRequestDelete,
 }: ApplicationColumnProps) {
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [visibleCount, setVisibleCount] = useState(APPLICATIONS_BATCH_SIZE);
   const label = APPLICATION_STATUS_LABELS[status];
   const styles = STATUS_STYLES[status];
   const headingId = `column-${status}`;
+  const activeApplicationIndex = activeApplicationId
+    ? applications.findIndex(
+        (application) => application.id === activeApplicationId,
+      )
+    : -1;
+  const effectiveVisibleCount = Math.max(
+    visibleCount,
+    activeApplicationIndex + 1,
+  );
+  const visibleApplications = applications.slice(0, effectiveVisibleCount);
+  const hasMoreApplications = visibleApplications.length < applications.length;
   const { isOver, setNodeRef } = useDroppable({
     id: `application-column:${status}`,
     disabled: applications.length > 0,
   });
+
+  useEffect(() => {
+    if (activeApplicationIndex >= visibleCount) {
+      setVisibleCount(activeApplicationIndex + 1);
+    }
+  }, [activeApplicationIndex, visibleCount]);
+
+  useEffect(() => {
+    if (
+      !hasMoreApplications ||
+      isDragActive ||
+      !loadMoreRef.current ||
+      typeof IntersectionObserver === "undefined"
+    ) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          startTransition(() => {
+            setVisibleCount((currentCount) =>
+              Math.min(
+                currentCount + APPLICATIONS_BATCH_SIZE,
+                applications.length,
+              ),
+            );
+          });
+        }
+      },
+      { rootMargin: "0px 0px 240px" },
+    );
+    observer.observe(loadMoreRef.current);
+
+    return () => observer.disconnect();
+  }, [applications.length, hasMoreApplications, isDragActive]);
+
+  function loadMoreApplications() {
+    startTransition(() => {
+      setVisibleCount((currentCount) =>
+        Math.min(currentCount + APPLICATIONS_BATCH_SIZE, applications.length),
+      );
+    });
+  }
 
   return (
     <section
@@ -95,12 +164,12 @@ export function ApplicationColumn({
       </header>
 
       <SortableContext
-        items={applications.map((application) => application.id)}
+        items={visibleApplications.map((application) => application.id)}
         strategy={verticalListSortingStrategy}
       >
         <div className="min-h-32 space-y-3">
           {applications.length > 0 ? (
-            applications.map((application) => (
+            visibleApplications.map((application) => (
               <SortableApplicationCard
                 key={application.id}
                 application={application}
@@ -118,6 +187,25 @@ export function ApplicationColumn({
           )}
         </div>
       </SortableContext>
+
+      {hasMoreApplications ? (
+        <div
+          ref={loadMoreRef}
+          className="mt-4 rounded-card border border-dashed border-line-strong bg-card/45 px-3 py-3 text-center"
+        >
+          <p className="text-xs text-muted tabular-nums">
+            Mostrando {visibleApplications.length} de {applications.length}
+          </p>
+          <button
+            type="button"
+            className="mt-2 min-h-10 rounded-button px-3 text-sm font-bold text-ink transition hover:bg-card disabled:opacity-50"
+            onClick={loadMoreApplications}
+            disabled={isDragActive}
+          >
+            Carregar mais
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }
