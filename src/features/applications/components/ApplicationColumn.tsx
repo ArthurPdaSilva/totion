@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { APPLICATION_STATUS_LABELS } from "../constants/applicationStatuses";
+import type { ApplicationDropTarget } from "../services/reorderApplications";
 import type { Application, ApplicationStatus } from "../types/application";
 import { SortableApplicationCard } from "./SortableApplicationCard";
 
@@ -23,6 +24,7 @@ type ApplicationColumnProps = {
   isDragActive: boolean;
   isDragDisabled: boolean;
   keyboardActiveId: string | null;
+  dropTarget: ApplicationDropTarget | null;
   onKeyboardDragKeyDown: (
     event: KeyboardEvent<HTMLButtonElement>,
     application: Application,
@@ -69,6 +71,7 @@ export function ApplicationColumn({
   isDragActive,
   isDragDisabled,
   keyboardActiveId,
+  dropTarget,
   onKeyboardDragKeyDown,
   onRequestEdit,
   onRequestDelete,
@@ -89,9 +92,12 @@ export function ApplicationColumn({
   );
   const visibleApplications = applications.slice(0, effectiveVisibleCount);
   const hasMoreApplications = visibleApplications.length < applications.length;
+  const isDropTarget =
+    (dropTarget?.type === "column" && dropTarget.status === status) ||
+    (dropTarget?.type === "application" &&
+      applications.some((application) => application.id === dropTarget.id));
   const { isOver, setNodeRef } = useDroppable({
     id: `application-column:${status}`,
-    disabled: applications.length > 0,
   });
 
   useEffect(() => {
@@ -141,7 +147,8 @@ export function ApplicationColumn({
   return (
     <section
       ref={setNodeRef}
-      className={`w-board-column shrink-0 snap-start rounded-panel border ${styles.border} ${styles.surface} p-3 transition sm:p-4 min-[1440px]:w-auto min-[1440px]:min-w-0 min-[1440px]:flex-1 min-[1440px]:shrink min-[1440px]:snap-none min-[1440px]:p-3 2xl:p-4 ${isOver ? "ring-3 ring-focus/20" : ""}`}
+      data-application-column={status}
+      className={`w-board-column shrink-0 snap-start rounded-panel border ${styles.border} ${styles.surface} p-3 transition sm:p-4 min-[1440px]:w-auto min-[1440px]:min-w-0 min-[1440px]:flex-1 min-[1440px]:shrink min-[1440px]:snap-none min-[1440px]:p-3 2xl:p-4 ${isOver || isDropTarget ? "ring-3 ring-focus/20" : ""}`}
       aria-labelledby={headingId}
     >
       <header className="mb-4 flex min-h-8 items-center justify-between gap-3 px-1">
@@ -181,6 +188,12 @@ export function ApplicationColumn({
               <SortableApplicationCard
                 key={application.id}
                 application={application}
+                dropEdge={
+                  dropTarget?.type === "application" &&
+                  dropTarget.id === application.id
+                    ? dropTarget.edge
+                    : null
+                }
                 isDragDisabled={isDragDisabled}
                 isKeyboardDragging={keyboardActiveId === application.id}
                 onKeyboardDragKeyDown={onKeyboardDragKeyDown}

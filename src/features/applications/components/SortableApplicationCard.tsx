@@ -6,6 +6,7 @@ import { ApplicationCard } from "./ApplicationCard";
 
 type SortableApplicationCardProps = {
   application: Application;
+  dropEdge: "before" | "after" | null;
   isDragDisabled: boolean;
   isKeyboardDragging: boolean;
   onKeyboardDragKeyDown: (
@@ -21,6 +22,7 @@ type SortableApplicationCardProps = {
 
 export function SortableApplicationCard({
   application,
+  dropEdge,
   isDragDisabled,
   isKeyboardDragging,
   onKeyboardDragKeyDown,
@@ -47,15 +49,16 @@ export function SortableApplicationCard({
   return (
     <div
       ref={setNodeRef}
-      className={
-        isDragging
-          ? "opacity-25"
-          : isKeyboardDragging
-            ? "rounded-card ring-3 ring-focus/35"
-            : undefined
-      }
+      data-application-id={application.id}
+      className={`relative ${isDragging ? "opacity-25" : isKeyboardDragging ? "rounded-card ring-3 ring-focus/35" : ""}`}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
+      {dropEdge ? (
+        <span
+          className={`pointer-events-none absolute right-2 left-2 z-20 h-0.5 rounded-full bg-focus ${dropEdge === "before" ? "-top-1.5" : "-bottom-1.5"}`}
+          aria-hidden="true"
+        />
+      ) : null}
       <ApplicationCard
         application={application}
         onRequestEdit={onRequestEdit}

@@ -61,6 +61,46 @@ describe("reorderApplications", () => {
     ]);
   });
 
+  it("insere entre o primeiro e o segundo card da coluna de destino", () => {
+    const applications = [
+      createApplication("moved", "applied", 0),
+      createApplication("closed-first", "closed", 0),
+      createApplication("closed-second", "closed", 1),
+      createApplication("closed-third", "closed", 2),
+    ];
+
+    const reordered = reorderApplications(applications, "moved", {
+      type: "application",
+      id: "closed-first",
+      edge: "after",
+    });
+
+    expect(reordered).toMatchObject([
+      { id: "closed-first", status: "closed", position: 0 },
+      { id: "moved", status: "closed", position: 1 },
+      { id: "closed-second", status: "closed", position: 2 },
+      { id: "closed-third", status: "closed", position: 3 },
+    ]);
+  });
+
+  it("move o primeiro card para depois do segundo", () => {
+    const applications = [
+      createApplication("first", "applied", 0),
+      createApplication("second", "applied", 1),
+    ];
+
+    const reordered = reorderApplications(applications, "first", {
+      type: "application",
+      id: "second",
+      edge: "after",
+    });
+
+    expect(reordered).toMatchObject([
+      { id: "second", status: "applied", position: 0 },
+      { id: "first", status: "applied", position: 1 },
+    ]);
+  });
+
   it("aceita uma coluna vazia como destino", () => {
     const applications = [createApplication("first", "applied", 0)];
 

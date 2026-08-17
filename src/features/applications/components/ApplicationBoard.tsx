@@ -11,12 +11,19 @@ import {
   KeyboardSensor,
   MouseSensor,
   pointerWithin,
+  rectIntersection,
   TouchSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { type KeyboardEvent, type ReactNode, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { notification } from "../../../shared/notifications";
 import {
   APPLICATION_STATUS_LABELS,
@@ -51,6 +58,7 @@ function getDropTarget(
   active: DragOverEvent["active"],
   over: DragOverEvent["over"],
   applications: Application[],
+  pointerY: number | null = null,
   verticalDelta = 0,
 ): ApplicationDropTarget | null {
   if (!over) {
@@ -77,17 +85,33 @@ function getDropTarget(
   }
 
   const activeRect = active.rect.current.translated;
+  const targetCenter = over.rect.top + over.rect.height / 2;
+  const activeCenter = activeRect
+    ? activeRect.top + activeRect.height / 2
+    : null;
+  const dropY = pointerY ?? activeCenter;
   const edge = verticalDelta
     ? verticalDelta > 0
       ? "after"
       : "before"
-    : activeRect &&
-        activeRect.top + activeRect.height / 2 >
-          over.rect.top + over.rect.height / 2
+    : dropY !== null && dropY > targetCenter
       ? "after"
       : "before";
 
   return { type: "application", id, edge };
+}
+
+function getActivatorPoint(event: Event) {
+  if (event instanceof MouseEvent) {
+    return { x: event.clientX, y: event.clientY };
+  }
+
+  if (typeof TouchEvent !== "undefined" && event instanceof TouchEvent) {
+    const touch = event.touches[0] ?? event.changedTouches[0];
+    return touch ? { x: touch.clientX, y: touch.clientY } : null;
+  }
+
+  return null;
 }
 
 function isSameDropTarget(
@@ -109,16 +133,30 @@ function isSameDropTarget(
 
 const collisionDetectionStrategy: CollisionDetection = (arguments_) => {
   if (arguments_.pointerCoordinates) {
-    const collisions = pointerWithin(arguments_).filter(
+    const pointerCollisions = pointerWithin(arguments_).filter(
       (collision) => String(collision.id) !== String(arguments_.active.id),
     );
-    const applicationCollisions = collisions.filter(
+    const intersectionCollisions = rectIntersection(arguments_).filter(
+      (collision) => String(collision.id) !== String(arguments_.active.id),
+    );
+    const pointerApplicationCollisions = pointerCollisions.filter(
+      (collision) => !String(collision.id).startsWith("application-column:"),
+    );
+    const intersectionApplicationCollisions = intersectionCollisions.filter(
       (collision) => !String(collision.id).startsWith("application-column:"),
     );
 
-    return applicationCollisions.length > 0
-      ? applicationCollisions
-      : collisions;
+    if (pointerApplicationCollisions.length > 0) {
+      return pointerApplicationCollisions;
+    }
+
+    if (intersectionApplicationCollisions.length > 0) {
+      return intersectionApplicationCollisions;
+    }
+
+    return pointerCollisions.length > 0
+      ? pointerCollisions
+      : intersectionCollisions;
   }
 
   return closestCorners(arguments_);
@@ -141,9 +179,14 @@ export function ApplicationBoard({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [keyboardActiveId, setKeyboardActiveId] = useState<string | null>(null);
   const [keyboardAnnouncement, setKeyboardAnnouncement] = useState("");
+  const [dropTarget, setDropTarget] = useState<ApplicationDropTarget | null>(
+    null,
+  );
   const keyboardActiveIdRef = useRef<string | null>(null);
   const [isCommitting, setIsCommitting] = useState(false);
   const lastTargetRef = useRef<ApplicationDropTarget | null>(null);
+  const currentPointerRef = useRef<{ x: number; y: number } | null>(null);
+  const boardRef = useRef<HTMLElement>(null);
   const isCommittingRef = useRef(false);
   const isKeyboardMoveRef = useRef(false);
   const sensors = useSensors(
@@ -155,9 +198,119 @@ export function ApplicationBoard({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  useEffect(() => {
+    function trackPointer(event: MouseEvent | TouchEvent) {
+      currentPointerRef.current = getActivatorPoint(event);
+    }
+
+    window.addEventListener("mousemove", trackPointer);
+    window.addEventListener("touchmove", trackPointer, { passive: true });
+
+    return () => {
+      window.removeEventListener("mousemove", trackPointer);
+      window.removeEventListener("touchmove", trackPointer);
+    };
+  }, []);
   const activeApplication = applications.find(
     (application) => application.id === (activeId ?? keyboardActiveId),
   );
+
+  function getTargetStatus(target: ApplicationDropTarget | null) {
+    if (!target) {
+      return null;
+    }
+
+    if (target.type === "column") {
+      return target.status;
+    }
+
+    return (
+      applications.find((application) => application.id === target.id)
+        ?.status ?? null
+    );
+  }
+
+  function getColumnAtPoint(point: { x: number; y: number } | null) {
+    if (!point) {
+      return null;
+    }
+
+    for (const column of Array.from(
+      boardRef.current?.querySelectorAll<HTMLElement>(
+        "[data-application-column]",
+      ) ?? [],
+    )) {
+      const bounds = column.getBoundingClientRect();
+
+      if (
+        point.x >= bounds.left &&
+        point.x <= bounds.right &&
+        point.y >= bounds.top &&
+        point.y <= bounds.bottom
+      ) {
+        return column;
+      }
+    }
+
+    return null;
+  }
+
+  function getStatusAtPoint(point: { x: number; y: number } | null) {
+    const status = getColumnAtPoint(point)?.dataset.applicationColumn;
+    return (
+      APPLICATION_STATUSES.find((candidate) => candidate === status) ?? null
+    );
+  }
+
+  function getPointerDropTarget(
+    point: { x: number; y: number } | null,
+    activeApplicationId: string,
+  ): ApplicationDropTarget | null {
+    const column = getColumnAtPoint(point);
+    const status = APPLICATION_STATUSES.find(
+      (candidate) => candidate === column?.dataset.applicationColumn,
+    );
+
+    if (!point || !column || !status) {
+      return null;
+    }
+
+    const cards = Array.from(
+      column.querySelectorAll<HTMLElement>("[data-application-id]"),
+    )
+      .filter((card) => card.dataset.applicationId !== activeApplicationId)
+      .map((card) => ({
+        id: card.dataset.applicationId,
+        bounds: card.getBoundingClientRect(),
+      }))
+      .filter(
+        (card): card is { id: string; bounds: DOMRect } =>
+          card.id !== undefined,
+      )
+      .sort((first, second) => first.bounds.top - second.bounds.top);
+
+    if (cards.length === 0 || point.y >= (cards.at(-1)?.bounds.bottom ?? 0)) {
+      return { type: "column", status };
+    }
+
+    const closestCard = cards.reduce((closest, card) => {
+      const closestCenter = closest.bounds.top + closest.bounds.height / 2;
+      const cardCenter = card.bounds.top + card.bounds.height / 2;
+      return Math.abs(point.y - cardCenter) < Math.abs(point.y - closestCenter)
+        ? card
+        : closest;
+    });
+    const closestCenter =
+      closestCard.bounds.top + closestCard.bounds.height / 2;
+
+    return {
+      type: "application",
+      id: closestCard.id,
+      edge: point.y > closestCenter ? "after" : "before",
+    };
+  }
+
   const announcements: Announcements = {
     onDragStart({ active }) {
       const application = applications.find(
@@ -168,7 +321,9 @@ export function ApplicationBoard({
         : "Movimento iniciado.";
     },
     onDragOver({ active, over }) {
-      const target = getDropTarget(active, over, applications);
+      const target = isKeyboardMoveRef.current
+        ? getDropTarget(active, over, applications)
+        : getPointerDropTarget(currentPointerRef.current, String(active.id));
 
       if (!target) {
         return "A candidatura não está sobre um destino válido.";
@@ -193,7 +348,10 @@ export function ApplicationBoard({
       return `Posição ${movedApplication.position + 1} de ${totalInStatus} em ${APPLICATION_STATUS_LABELS[movedApplication.status]}.`;
     },
     onDragEnd({ over }) {
-      return over
+      const hasValidTarget = isKeyboardMoveRef.current
+        ? Boolean(over ?? lastTargetRef.current)
+        : getStatusAtPoint(currentPointerRef.current) !== null;
+      return hasValidTarget
         ? "Candidatura solta. Salvando a nova posição."
         : "Destino inválido. A ordem anterior será restaurada.";
     },
@@ -209,66 +367,99 @@ export function ApplicationBoard({
 
     setActiveId(String(event.active.id));
     lastTargetRef.current = null;
+    setDropTarget(null);
+    currentPointerRef.current = getActivatorPoint(event.activatorEvent);
     isKeyboardMoveRef.current = event.activatorEvent.type === "keydown";
     onMoveStart();
   }
 
-  function previewMove(event: DragOverEvent) {
-    const target = getDropTarget(
+  function updateMovePreview(
+    event: DragMoveEvent | DragOverEvent,
+    applyOptimisticPreview: boolean,
+  ) {
+    const pointerY = isKeyboardMoveRef.current
+      ? null
+      : (currentPointerRef.current?.y ?? null);
+    const detectedTarget = getDropTarget(
       event.active,
       event.over,
       applications,
+      pointerY,
       isKeyboardMoveRef.current ? event.delta.y : 0,
     );
     const activeApplicationId = String(event.active.id);
+    const target = isKeyboardMoveRef.current
+      ? detectedTarget
+      : getPointerDropTarget(currentPointerRef.current, activeApplicationId);
+
+    if (!target) {
+      setDropTarget(null);
+      return;
+    }
 
     if (target?.type === "application" && target.id === activeApplicationId) {
       return;
     }
 
-    if (target && !isSameDropTarget(lastTargetRef.current, target)) {
+    setDropTarget(target);
+
+    if (!isSameDropTarget(lastTargetRef.current, target)) {
       lastTargetRef.current = target;
 
-      // Empty columns must stay droppable until the pointer is released.
-      if (target.type === "application") {
+      if (applyOptimisticPreview) {
         onMovePreview(activeApplicationId, target);
       }
     }
   }
 
-  function previewKeyboardMove(event: DragMoveEvent) {
-    if (!isKeyboardMoveRef.current) {
-      return;
-    }
+  function previewMove(event: DragOverEvent) {
+    updateMovePreview(event, isKeyboardMoveRef.current);
+  }
 
-    const target = getDropTarget(
-      event.active,
-      event.over,
-      applications,
-      event.delta.y,
-    );
-    const activeApplicationId = String(event.active.id);
-
-    if (
-      target &&
-      !(target.type === "application" && target.id === activeApplicationId) &&
-      !isSameDropTarget(lastTargetRef.current, target)
-    ) {
-      lastTargetRef.current = target;
-      onMovePreview(activeApplicationId, target);
-    }
+  function previewMoveDuringDrag(event: DragMoveEvent) {
+    updateMovePreview(event, isKeyboardMoveRef.current);
   }
 
   function finishMove(event: DragEndEvent) {
-    const target = getDropTarget(
+    const movedId = String(event.active.id);
+    const pointerY = isKeyboardMoveRef.current
+      ? null
+      : (currentPointerRef.current?.y ?? null);
+    const detectedTarget = getDropTarget(
       event.active,
       event.over,
       applications,
+      pointerY,
       isKeyboardMoveRef.current ? event.delta.y : 0,
     );
-    const movedId = String(event.active.id);
+    const lastTarget = lastTargetRef.current;
+    const pointerTarget = isKeyboardMoveRef.current
+      ? null
+      : getPointerDropTarget(currentPointerRef.current, movedId);
+    const stableDetectedTarget =
+      event.over &&
+      detectedTarget &&
+      lastTarget &&
+      isSameDropTarget(lastTarget, detectedTarget)
+        ? detectedTarget
+        : null;
+    const target = isKeyboardMoveRef.current
+      ? (lastTarget ?? detectedTarget)
+      : (pointerTarget ?? stableDetectedTarget);
+    console.log("[Totion DnD] drag end", {
+      deltaY: event.delta.y,
+      overId: event.over?.id ?? null,
+      pointer: currentPointerRef.current,
+      pointerY,
+      pointerStatus: getTargetStatus(pointerTarget),
+      detectedTarget,
+      lastTarget,
+      pointerTarget,
+    });
     setActiveId(null);
+    setDropTarget(null);
     lastTargetRef.current = null;
+    currentPointerRef.current = null;
     isKeyboardMoveRef.current = false;
 
     if (!target) {
@@ -349,6 +540,7 @@ export function ApplicationBoard({
         keyboardActiveIdRef.current = application.id;
         setKeyboardActiveId(application.id);
         lastTargetRef.current = null;
+        setDropTarget(null);
         onMoveStart();
         setKeyboardAnnouncement(
           `Você iniciou o movimento de ${application.name}.`,
@@ -360,6 +552,7 @@ export function ApplicationBoard({
         const target = lastTargetRef.current;
         keyboardActiveIdRef.current = null;
         setKeyboardActiveId(null);
+        setDropTarget(null);
 
         if (target) {
           persistMove(application.id, target);
@@ -380,6 +573,7 @@ export function ApplicationBoard({
       keyboardActiveIdRef.current = null;
       setKeyboardActiveId(null);
       lastTargetRef.current = null;
+      setDropTarget(null);
       onMoveCancel();
       setKeyboardAnnouncement(
         "Movimento cancelado. A ordem anterior foi restaurada.",
@@ -420,6 +614,7 @@ export function ApplicationBoard({
 
     if (target) {
       lastTargetRef.current = target;
+      setDropTarget(target);
       onMovePreview(application.id, target);
       announceTarget(application.id, target);
     }
@@ -437,18 +632,21 @@ export function ApplicationBoard({
         },
       }}
       onDragStart={startMove}
-      onDragMove={previewKeyboardMove}
+      onDragMove={previewMoveDuringDrag}
       onDragOver={previewMove}
       onDragEnd={finishMove}
       onDragCancel={() => {
         setActiveId(null);
+        setDropTarget(null);
         lastTargetRef.current = null;
+        currentPointerRef.current = null;
         isKeyboardMoveRef.current = false;
         onMoveCancel();
       }}
     >
       <section
-        className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-5 sm:gap-5 min-[1440px]:snap-none min-[1440px]:gap-3 min-[1440px]:overflow-x-clip min-[1440px]:pb-0 2xl:gap-4"
+        ref={boardRef}
+        className={`flex gap-4 overflow-x-auto overscroll-x-contain pb-5 sm:gap-5 min-[1440px]:snap-none min-[1440px]:gap-3 min-[1440px]:overflow-x-clip min-[1440px]:pb-0 2xl:gap-4 ${(activeId ?? keyboardActiveId) ? "snap-none" : "snap-x snap-mandatory"}`}
         aria-busy={isLoading || isCommitting}
         aria-label="Quadro de candidaturas"
       >
@@ -474,6 +672,7 @@ export function ApplicationBoard({
               isDragActive={Boolean(activeId ?? keyboardActiveId)}
               isDragDisabled={isCommitting || isFiltered}
               keyboardActiveId={keyboardActiveId}
+              dropTarget={dropTarget}
               onKeyboardDragKeyDown={handleKeyboardDragKeyDown}
               onRequestEdit={onRequestEdit}
               onRequestDelete={onRequestDelete}

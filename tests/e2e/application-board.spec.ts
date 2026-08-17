@@ -1,12 +1,16 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 
 async function createApplication(
-  page: import("@playwright/test").Page,
+  page: Page,
   name: string,
+  status: "applied" | "in_progress" | "closed" = "applied",
 ) {
   await page.getByRole("button", { name: "Nova candidatura" }).click();
   await page.getByLabel("Nome da vaga").fill(name);
   await page.getByLabel("Aplicado em").fill("2026-08-16");
+  if (status !== "applied") {
+    await page.getByLabel("Status").selectOption(status);
+  }
   await page.getByRole("button", { name: "Salvar candidatura" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await page
@@ -15,12 +19,64 @@ async function createApplication(
     .click();
 }
 
+async function dragApplicationToColumn(
+  page: Page,
+  moveButton: Locator,
+  targetColumn: Locator,
+  projectName: string,
+) {
+  if (projectName === "chromium-mobile") {
+    await moveButton.dragTo(targetColumn);
+    return;
+  }
+
+  await targetColumn.evaluate((element) => {
+    element.scrollIntoView({ block: "nearest", inline: "nearest" });
+  });
+  await expect(moveButton).toBeInViewport();
+  await expect(targetColumn).toBeInViewport();
+  const sourceBox = await moveButton.boundingBox();
+  const targetBox = await targetColumn.boundingBox();
+
+  if (!sourceBox || !targetBox) {
+    throw new Error("Não foi possível medir o card e a coluna de destino");
+  }
+
+  await dragApplicationToPoint(
+    page,
+    moveButton,
+    targetBox.x + targetBox.width / 2,
+    targetBox.y + 120,
+  );
+}
+
+async function dragApplicationToPoint(
+  page: Page,
+  moveButton: Locator,
+  targetX: number,
+  targetY: number,
+) {
+  const sourceBox = await moveButton.boundingBox();
+
+  if (!sourceBox) {
+    throw new Error("Não foi possível medir o card de origem");
+  }
+
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2,
+    sourceBox.y + sourceBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2 + 12, sourceBox.y, {
+    steps: 3,
+  });
+  await page.mouse.move(targetX, targetY, { steps: 20 });
+  await page.mouse.up();
+}
+
 test("move uma candidatura para uma coluna vazia e persiste após recarregar", async ({
   page,
 }, testInfo) => {
-  if (testInfo.project.name === "chromium-desktop") {
-    await page.setViewportSize({ width: 1440, height: 900 });
-  }
   await page.goto("/");
 
   await createApplication(page, "Desenvolvedor Front-end");
@@ -32,33 +88,12 @@ test("move uma candidatura para uma coluna vazia e persiste após recarregar", a
   });
 
   await expect(moveButton).toBeVisible();
-  if (testInfo.project.name === "chromium-mobile") {
-    await moveButton.dragTo(closedColumn);
-  } else {
-    await expect(moveButton).toBeInViewport();
-    await expect(closedColumn).toBeInViewport();
-    const sourceBox = await moveButton.boundingBox();
-    const targetBox = await closedColumn.boundingBox();
-
-    if (!sourceBox || !targetBox) {
-      throw new Error("Não foi possível medir o card e a coluna de destino");
-    }
-
-    await page.mouse.move(
-      sourceBox.x + sourceBox.width / 2,
-      sourceBox.y + sourceBox.height / 2,
-    );
-    await page.mouse.down();
-    await page.mouse.move(sourceBox.x + sourceBox.width / 2 + 12, sourceBox.y, {
-      steps: 3,
-    });
-    await page.mouse.move(
-      targetBox.x + targetBox.width / 2,
-      targetBox.y + 120,
-      { steps: 20 },
-    );
-    await page.mouse.up();
-  }
+  await dragApplicationToColumn(
+    page,
+    moveButton,
+    closedColumn,
+    testInfo.project.name,
+  );
 
   const movedHandle = closedColumn.getByRole("button", {
     name: "Mover candidatura Desenvolvedor Front-end",
@@ -75,6 +110,193 @@ test("move uma candidatura para uma coluna vazia e persiste após recarregar", a
       .getByRole("region", { name: "Encerrada" })
       .getByText("Desenvolvedor Front-end"),
   ).toBeVisible();
+});
+
+test("move uma candidatura para Em andamento em 1280px com destino ocupado", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-mobile",
+    "Cobertura específica do layout desktop abaixo de 1440px",
+  );
+  await page.goto("/");
+  expect(page.viewportSize()?.width).toBe(1280);
+
+  await createApplication(page, "Produto existente", "in_progress");
+  await createApplication(page, "Analista de produto");
+
+  const appliedColumn = page.getByRole("region", { name: "Aplicada" });
+  const progressColumn = page.getByRole("region", { name: "Em andamento" });
+  const moveButton = appliedColumn.getByRole("button", {
+    name: "Mover candidatura Analista de produto",
+  });
+  await dragApplicationToColumn(
+    page,
+    moveButton,
+    progressColumn,
+    testInfo.project.name,
+  );
+
+  await expect(progressColumn.getByText("Analista de produto")).toBeVisible();
+  await expect(progressColumn.getByLabel("2 candidaturas")).toBeVisible();
+  await expect(appliedColumn.getByLabel("0 candidaturas")).toBeVisible();
+
+  await page.reload();
+  await expect(
+    page
+      .getByRole("region", { name: "Em andamento" })
+      .getByText("Analista de produto"),
+  ).toBeVisible();
+});
+
+test("insere o card logo após o primeiro card da coluna de destino", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-mobile",
+    "Cobertura específica do gesto de mouse",
+  );
+  await page.goto("/");
+  await createApplication(page, "Encerrada 1", "closed");
+  await createApplication(page, "Encerrada 2", "closed");
+  await createApplication(page, "Encerrada 3", "closed");
+  await createApplication(page, "Movida de aplicada");
+
+  const appliedColumn = page.getByRole("region", { name: "Aplicada" });
+  const closedColumn = page.getByRole("region", { name: "Encerrada" });
+  const moveButton = appliedColumn.getByRole("button", {
+    name: "Mover candidatura Movida de aplicada",
+  });
+  const firstClosedCard = closedColumn.getByRole("article").filter({
+    has: page.getByRole("heading", { name: "Encerrada 1" }),
+  });
+  await firstClosedCard.evaluate((element) => {
+    element.scrollIntoView({ block: "center", inline: "nearest" });
+  });
+  await expect(moveButton).toBeInViewport();
+  await expect(firstClosedCard).toBeInViewport();
+  const targetBox = await firstClosedCard.boundingBox();
+
+  if (!targetBox) {
+    throw new Error("Não foi possível medir o primeiro card de destino");
+  }
+
+  await dragApplicationToPoint(
+    page,
+    moveButton,
+    targetBox.x + targetBox.width / 2,
+    targetBox.y + targetBox.height + 4,
+  );
+
+  await expect(closedColumn.locator("article h3")).toHaveText([
+    "Encerrada 1",
+    "Movida de aplicada",
+    "Encerrada 2",
+    "Encerrada 3",
+  ]);
+  await page.reload();
+  await expect(
+    page.getByRole("region", { name: "Encerrada" }).locator("article h3"),
+  ).toHaveText([
+    "Encerrada 1",
+    "Movida de aplicada",
+    "Encerrada 2",
+    "Encerrada 3",
+  ]);
+});
+
+test("move o primeiro card para depois do segundo na mesma coluna", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-mobile",
+    "Cobertura específica do gesto de mouse",
+  );
+  await page.goto("/");
+  await createApplication(page, "Primeira aplicada");
+  await createApplication(page, "Segunda aplicada");
+
+  const appliedColumn = page.getByRole("region", { name: "Aplicada" });
+  const moveButton = appliedColumn.getByRole("button", {
+    name: "Mover candidatura Primeira aplicada",
+  });
+  const secondCard = appliedColumn.getByRole("article").filter({
+    has: page.getByRole("heading", { name: "Segunda aplicada" }),
+  });
+  await secondCard.evaluate((element) => {
+    element.scrollIntoView({ block: "center", inline: "nearest" });
+  });
+  await expect(moveButton).toBeInViewport();
+  await expect(secondCard).toBeInViewport();
+  const targetBox = await secondCard.boundingBox();
+
+  if (!targetBox) {
+    throw new Error("Não foi possível medir o segundo card");
+  }
+
+  await dragApplicationToPoint(
+    page,
+    moveButton,
+    targetBox.x + targetBox.width / 2,
+    targetBox.y + targetBox.height * 0.75,
+  );
+
+  await expect(appliedColumn.locator("article h3")).toHaveText([
+    "Segunda aplicada",
+    "Primeira aplicada",
+  ]);
+  await page.reload();
+  await expect(
+    page.getByRole("region", { name: "Aplicada" }).locator("article h3"),
+  ).toHaveText(["Segunda aplicada", "Primeira aplicada"]);
+});
+
+test("cancela o movimento quando o card é solto fora das colunas de status", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-mobile",
+    "Cobertura específica do gesto de mouse",
+  );
+  await page.goto("/");
+  await createApplication(page, "Candidatura mantida");
+
+  const appliedColumn = page.getByRole("region", { name: "Aplicada" });
+  const progressColumn = page.getByRole("region", { name: "Em andamento" });
+  const portalsColumn = page.getByRole("region", { name: "Portais de Vagas" });
+  const moveButton = appliedColumn.getByRole("button", {
+    name: "Mover candidatura Candidatura mantida",
+  });
+  const sourceBox = await moveButton.boundingBox();
+  const progressBox = await progressColumn.boundingBox();
+  const portalsBox = await portalsColumn.boundingBox();
+
+  if (!sourceBox || !progressBox || !portalsBox) {
+    throw new Error("Não foi possível medir o quadro para cancelar o drag");
+  }
+
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2,
+    sourceBox.y + sourceBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2 + 12, sourceBox.y, {
+    steps: 3,
+  });
+  await page.mouse.move(
+    progressBox.x + progressBox.width / 2,
+    progressBox.y + 120,
+    { steps: 12 },
+  );
+  await page.mouse.move(
+    portalsBox.x + portalsBox.width / 2,
+    portalsBox.y + 120,
+    { steps: 12 },
+  );
+  await page.mouse.up();
+
+  await expect(appliedColumn.getByText("Candidatura mantida")).toBeVisible();
+  await expect(appliedColumn.getByLabel("1 candidatura")).toBeVisible();
 });
 
 test("reordena candidaturas com o teclado e mantém a ordem", async ({
