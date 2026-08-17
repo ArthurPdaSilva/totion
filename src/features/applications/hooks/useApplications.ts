@@ -61,14 +61,26 @@ export function useApplications(repository: ApplicationsRepository) {
   }, [repository, reloadKey]);
 
   async function addApplication(input: NewApplication) {
-    const application = await createApplication(repository, input);
+    const { createdApplication, changedApplications } = await createApplication(
+      repository,
+      input,
+    );
+    const changedApplicationsById = new Map(
+      changedApplications.map((application) => [application.id, application]),
+    );
 
     setState((currentState) => ({
       status: "ready",
-      applications: [...currentState.applications, application],
+      applications: [
+        ...currentState.applications.map(
+          (application) =>
+            changedApplicationsById.get(application.id) ?? application,
+        ),
+        createdApplication,
+      ],
     }));
 
-    return application;
+    return createdApplication;
   }
 
   async function removeApplication(id: string) {

@@ -149,6 +149,37 @@ test("move uma candidatura para Em andamento em 1280px com destino ocupado", asy
   ).toBeVisible();
 });
 
+test("insere novas candidaturas no início de cada status", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === "chromium-mobile",
+    "Cobertura transacional dos três status no desktop",
+  );
+  await page.goto("/");
+
+  const statuses = [
+    { value: "applied" as const, label: "Aplicada" },
+    { value: "in_progress" as const, label: "Em andamento" },
+    { value: "closed" as const, label: "Encerrada" },
+  ];
+
+  for (const status of statuses) {
+    await createApplication(page, `${status.label} antiga`, status.value);
+    await createApplication(page, `${status.label} nova`, status.value);
+    await expect(
+      page.getByRole("region", { name: status.label }).locator("article h3"),
+    ).toHaveText([`${status.label} nova`, `${status.label} antiga`]);
+  }
+
+  await page.reload();
+  for (const status of statuses) {
+    await expect(
+      page.getByRole("region", { name: status.label }).locator("article h3"),
+    ).toHaveText([`${status.label} nova`, `${status.label} antiga`]);
+  }
+});
+
 test("insere o card logo após o primeiro card da coluna de destino", async ({
   page,
 }, testInfo) => {
@@ -157,9 +188,9 @@ test("insere o card logo após o primeiro card da coluna de destino", async ({
     "Cobertura específica do gesto de mouse",
   );
   await page.goto("/");
-  await createApplication(page, "Encerrada 1", "closed");
-  await createApplication(page, "Encerrada 2", "closed");
   await createApplication(page, "Encerrada 3", "closed");
+  await createApplication(page, "Encerrada 2", "closed");
+  await createApplication(page, "Encerrada 1", "closed");
   await createApplication(page, "Movida de aplicada");
 
   const appliedColumn = page.getByRole("region", { name: "Aplicada" });
@@ -213,8 +244,8 @@ test("move o primeiro card para depois do segundo na mesma coluna", async ({
     "Cobertura específica do gesto de mouse",
   );
   await page.goto("/");
-  await createApplication(page, "Primeira aplicada");
   await createApplication(page, "Segunda aplicada");
+  await createApplication(page, "Primeira aplicada");
 
   const appliedColumn = page.getByRole("region", { name: "Aplicada" });
   const moveButton = appliedColumn.getByRole("button", {
@@ -307,8 +338,8 @@ test("reordena candidaturas com o teclado e mantém a ordem", async ({
     "Fluxo de teclado desktop",
   );
   await page.goto("/");
-  await createApplication(page, "Primeira candidatura");
   await createApplication(page, "Segunda candidatura");
+  await createApplication(page, "Primeira candidatura");
 
   const appliedColumn = page.getByRole("region", { name: "Aplicada" });
   const firstHandle = appliedColumn.getByRole("button", {

@@ -10,10 +10,16 @@ export type ApplicationUpdate = Pick<
   Application,
   "name" | "status" | "appliedAt" | "jobUrl" | "notes" | "updatedAt"
 >;
+export type ApplicationCreationResult = {
+  createdApplication: Application;
+  changedApplications: Application[];
+};
 
 export interface ApplicationsRepository {
   list(): Promise<Application[]>;
-  create(application: ApplicationWithoutPosition): Promise<Application>;
+  create(
+    application: ApplicationWithoutPosition,
+  ): Promise<ApplicationCreationResult>;
   updateById(id: string, update: ApplicationUpdate): Promise<Application[]>;
   moveById(
     id: string,
@@ -89,20 +95,28 @@ export class DexieApplicationsRepository implements ApplicationsRepository {
         const applicationsInStatus = await this.database.applications
           .where("status")
           .equals(application.status)
-          .toArray();
-        const lastPosition = applicationsInStatus.reduce(
-          (highestPosition, currentApplication) =>
-            Math.max(highestPosition, currentApplication.position),
-          -1,
-        );
-        const persistedApplication: Application = {
+          .sortBy("position");
+        const createdApplication: Application = {
           ...application,
-          position: lastPosition + 1,
+          position: 0,
         };
+        const shiftedApplications = applicationsInStatus.map(
+          (currentApplication, index) => ({
+            ...currentApplication,
+            position: index + 1,
+            updatedAt: application.updatedAt,
+          }),
+        );
 
-        await this.database.applications.add(persistedApplication);
+        await this.database.applications.add(createdApplication);
+        if (shiftedApplications.length > 0) {
+          await this.database.applications.bulkPut(shiftedApplications);
+        }
 
-        return persistedApplication;
+        return {
+          createdApplication,
+          changedApplications: [createdApplication, ...shiftedApplications],
+        };
       },
     );
   }

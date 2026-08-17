@@ -64,6 +64,7 @@ Nome, status e data da aplicação são obrigatórios. O link e as anotações s
 
 - Os únicos status do MVP são `applied`, `in_progress` e `closed`.
 - Toda candidatura pertence a exatamente um status.
+- Uma candidatura recém-criada ocupa o início da coluna escolhida, deslocando as candidaturas existentes.
 - A ordem dos cards é independente em cada status e deve sobreviver ao recarregamento da página.
 - A data da aplicação representa um dia no calendário, não um instante; ela deve ser persistida no formato `YYYY-MM-DD` para evitar mudanças causadas por fuso horário.
 - Excluir uma candidatura exige confirmação.
@@ -133,7 +134,7 @@ Componentes não devem acessar o IndexedDB diretamente. A persistência ficará 
 - `createdAt`: instante de criação.
 - `updatedAt`: instante da última alteração.
 
-O schema inicial é criado por migration. Criação, mudança de status e reordenação calculam e persistem as posições afetadas em transações do IndexedDB.
+O schema inicial é criado por migration. Criação no início da coluna, mudança de status e reordenação calculam e persistem as posições afetadas em transações do IndexedDB.
 
 ### `jobPortals`
 

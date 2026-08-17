@@ -40,13 +40,37 @@ class MemoryApplicationsRepository implements ApplicationsRepository {
       throw new Error("Falha sintética");
     }
 
-    const position = this.applications.filter(
-      (currentApplication) => currentApplication.status === application.status,
-    ).length;
-    const persistedApplication = { ...application, position };
-    this.applications.push(persistedApplication);
+    const createdApplication = { ...application, position: 0 };
+    const shiftedApplications = this.applications
+      .filter(
+        (currentApplication) =>
+          currentApplication.status === application.status,
+      )
+      .sort((first, second) => first.position - second.position)
+      .map((currentApplication, index) => ({
+        ...currentApplication,
+        position: index + 1,
+        updatedAt: application.updatedAt,
+      }));
+    const shiftedApplicationsById = new Map(
+      shiftedApplications.map((currentApplication) => [
+        currentApplication.id,
+        currentApplication,
+      ]),
+    );
+    this.applications = [
+      ...this.applications.map(
+        (currentApplication) =>
+          shiftedApplicationsById.get(currentApplication.id) ??
+          currentApplication,
+      ),
+      createdApplication,
+    ];
 
-    return persistedApplication;
+    return {
+      createdApplication,
+      changedApplications: [createdApplication, ...shiftedApplications],
+    };
   }
 
   async updateById(id: string, update: ApplicationUpdate) {

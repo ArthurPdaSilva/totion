@@ -55,26 +55,78 @@ afterEach(async () => {
 });
 
 describe("DexieApplicationsRepository", () => {
-  it("atribui posições independentes por status e preserva a ordem", async () => {
-    const repository = new DexieApplicationsRepository(createDatabase());
+  it("insere no início do status e normaliza as posições existentes", async () => {
+    const database = createDatabase();
+    const repository = new DexieApplicationsRepository(database);
 
-    const firstApplied = await repository.create(
+    const { createdApplication: firstApplied } = await repository.create(
       createApplication("applied-1", "applied"),
     );
-    const inProgress = await repository.create(
+    const { createdApplication: inProgress } = await repository.create(
       createApplication("progress-1", "in_progress"),
     );
-    const secondApplied = await repository.create(
-      createApplication("applied-2", "applied"),
-    );
+    await database.applications.update("applied-1", { position: 4 });
+    const newApplication = {
+      ...createApplication("applied-2", "applied"),
+      updatedAt: "2026-08-17T09:00:00.000Z",
+    };
+    const { createdApplication: secondApplied, changedApplications } =
+      await repository.create(newApplication);
 
     expect(firstApplied.position).toBe(0);
     expect(inProgress.position).toBe(0);
-    expect(secondApplied.position).toBe(1);
+    expect(secondApplied.position).toBe(0);
+    expect(changedApplications).toMatchObject([
+      { id: "applied-2", position: 0 },
+      {
+        id: "applied-1",
+        position: 1,
+        updatedAt: "2026-08-17T09:00:00.000Z",
+      },
+    ]);
     await expect(repository.list()).resolves.toMatchObject([
-      { id: "applied-1", position: 0 },
-      { id: "applied-2", position: 1 },
+      { id: "applied-2", position: 0 },
+      { id: "applied-1", position: 1 },
       { id: "progress-1", position: 0 },
+    ]);
+  });
+
+  it("restaura a coluna quando o reposicionamento da criação falha", async () => {
+    const database = createDatabase();
+    const repository = new DexieApplicationsRepository(database);
+    await repository.create(createApplication("existing", "applied"));
+    vi.spyOn(database.applications, "bulkPut").mockRejectedValueOnce(
+      new Error("Falha sintética na criação"),
+    );
+
+    await expect(
+      repository.create(createApplication("new", "applied")),
+    ).rejects.toThrow("Falha sintética na criação");
+    await expect(repository.list()).resolves.toMatchObject([
+      { id: "existing", status: "applied", position: 0 },
+    ]);
+  });
+
+  it("serializa criações concorrentes sem duplicar posições", async () => {
+    const databaseName = `totion-concurrent-create-${crypto.randomUUID()}`;
+    const firstDatabase = new TotionDatabase(databaseName);
+    const secondDatabase = new TotionDatabase(databaseName);
+    databases.push(firstDatabase, secondDatabase);
+    const firstRepository = new DexieApplicationsRepository(firstDatabase);
+    const secondRepository = new DexieApplicationsRepository(secondDatabase);
+
+    await Promise.all([
+      firstRepository.create(createApplication("concurrent-1", "applied")),
+      secondRepository.create(createApplication("concurrent-2", "applied")),
+    ]);
+
+    const applications = await firstRepository.list();
+    expect(applications.map((application) => application.id).sort()).toEqual([
+      "concurrent-1",
+      "concurrent-2",
+    ]);
+    expect(applications.map((application) => application.position)).toEqual([
+      0, 1,
     ]);
   });
 
@@ -123,9 +175,9 @@ describe("DexieApplicationsRepository", () => {
     const repository = new DexieApplicationsRepository(createDatabase());
     const updatedAt = "2026-08-17T09:00:00.000Z";
 
-    await repository.create(createApplication("applied-1", "applied"));
-    await repository.create(createApplication("applied-2", "applied"));
     await repository.create(createApplication("applied-3", "applied"));
+    await repository.create(createApplication("applied-2", "applied"));
+    await repository.create(createApplication("applied-1", "applied"));
     await repository.create(createApplication("progress-1", "in_progress"));
 
     await repository.updateById(
@@ -190,8 +242,8 @@ describe("DexieApplicationsRepository", () => {
     const updatedAt = "2026-08-17T09:00:00.000Z";
 
     await repository.create(createApplication("applied-1", "applied"));
-    await repository.create(createApplication("progress-1", "in_progress"));
     await repository.create(createApplication("progress-2", "in_progress"));
+    await repository.create(createApplication("progress-1", "in_progress"));
     await database.applications.update("progress-2", { position: 4 });
 
     await repository.updateById(
@@ -210,9 +262,9 @@ describe("DexieApplicationsRepository", () => {
     const repository = new DexieApplicationsRepository(createDatabase());
     const updatedAt = "2026-08-17T09:00:00.000Z";
 
-    await repository.create(createApplication("applied-1", "applied"));
-    await repository.create(createApplication("applied-2", "applied"));
     await repository.create(createApplication("applied-3", "applied"));
+    await repository.create(createApplication("applied-2", "applied"));
+    await repository.create(createApplication("applied-1", "applied"));
 
     await repository.moveById("applied-1", "applied", 2, updatedAt);
 
@@ -226,8 +278,8 @@ describe("DexieApplicationsRepository", () => {
   it("persiste movimento para uma coluna vazia", async () => {
     const repository = new DexieApplicationsRepository(createDatabase());
 
-    await repository.create(createApplication("applied-1", "applied"));
     await repository.create(createApplication("applied-2", "applied"));
+    await repository.create(createApplication("applied-1", "applied"));
     await repository.moveById(
       "applied-1",
       "closed",
@@ -244,8 +296,8 @@ describe("DexieApplicationsRepository", () => {
   it("restaura a ordem quando a persistência do movimento falha", async () => {
     const database = createDatabase();
     const repository = new DexieApplicationsRepository(database);
-    await repository.create(createApplication("applied-1", "applied"));
     await repository.create(createApplication("applied-2", "applied"));
+    await repository.create(createApplication("applied-1", "applied"));
     vi.spyOn(database.applications, "bulkPut").mockRejectedValueOnce(
       new Error("Falha sintética no movimento"),
     );
@@ -268,9 +320,9 @@ describe("DexieApplicationsRepository", () => {
     const repository = new DexieApplicationsRepository(createDatabase());
     const reorderedAt = "2026-08-17T09:00:00.000Z";
 
-    await repository.create(createApplication("applied-1", "applied"));
-    await repository.create(createApplication("applied-2", "applied"));
     await repository.create(createApplication("applied-3", "applied"));
+    await repository.create(createApplication("applied-2", "applied"));
+    await repository.create(createApplication("applied-1", "applied"));
     await repository.create(createApplication("closed-1", "closed"));
 
     await repository.deleteById("applied-2", reorderedAt);
@@ -294,8 +346,8 @@ describe("DexieApplicationsRepository", () => {
     const database = createDatabase();
     const repository = new DexieApplicationsRepository(database);
 
-    await repository.create(createApplication("applied-1", "applied"));
     await repository.create(createApplication("applied-2", "applied"));
+    await repository.create(createApplication("applied-1", "applied"));
     vi.spyOn(database.applications, "bulkPut").mockRejectedValueOnce(
       new Error("Falha sintética na normalização"),
     );

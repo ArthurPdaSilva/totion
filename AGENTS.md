@@ -63,6 +63,7 @@ Não adicionar novos status, status personalizados ou transições especiais sem
 ### Ordenação E Drag-And-Drop
 
 - Cada candidatura pertence a um único status e ocupa uma posição nesse status.
+- Criar uma candidatura insere o novo card no início da coluna escolhida e normaliza as posições existentes na mesma transação.
 - Mover entre colunas altera status e posição em uma única transação.
 - Reordenar na mesma coluna altera a posição sem mudar o status.
 - Alterar o status pelo formulário move o card para o fim da coluna de destino e normaliza a origem na mesma transação.

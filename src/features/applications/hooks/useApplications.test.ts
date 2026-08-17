@@ -25,6 +25,59 @@ function createApplication(id: string, position: number): Application {
 }
 
 describe("useApplications", () => {
+  it("insere a candidatura criada no início e reconcilia as posições", async () => {
+    const repository: ApplicationsRepository = {
+      async list() {
+        return INITIAL_APPLICATIONS;
+      },
+      async create() {
+        const createdApplication = createApplication("new-application", 0);
+        return {
+          createdApplication,
+          changedApplications: [
+            createdApplication,
+            createApplication("applied-1", 1),
+            createApplication("applied-2", 2),
+            createApplication("applied-3", 3),
+          ],
+        };
+      },
+      async updateById() {
+        return [];
+      },
+      async moveById() {
+        return [];
+      },
+      async deleteById() {
+        return [];
+      },
+    };
+    const { result } = renderHook(() => useApplications(repository));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    await act(async () => {
+      await result.current.addApplication({
+        name: "Nova vaga",
+        status: "applied",
+        appliedAt: "2026-08-17",
+        jobUrl: null,
+        notes: null,
+      });
+    });
+
+    expect(
+      result.current.applications
+        .filter((application) => application.status === "applied")
+        .sort((first, second) => first.position - second.position)
+        .map((application) => [application.id, application.position]),
+    ).toEqual([
+      ["new-application", 0],
+      ["applied-1", 1],
+      ["applied-2", 2],
+      ["applied-3", 3],
+    ]);
+  });
+
   it("reconcilia o card movido e as posições normalizadas", async () => {
     const repository: ApplicationsRepository = {
       async list() {
