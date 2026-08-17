@@ -18,6 +18,9 @@ async function createApplication(
 test("move uma candidatura para uma coluna vazia e persiste após recarregar", async ({
   page,
 }, testInfo) => {
+  if (testInfo.project.name === "chromium-desktop") {
+    await page.setViewportSize({ width: 1440, height: 900 });
+  }
   await page.goto("/");
 
   await createApplication(page, "Desenvolvedor Front-end");
@@ -41,19 +44,6 @@ test("move uma candidatura para uma coluna vazia e persiste após recarregar", a
       throw new Error("Não foi possível medir o card e a coluna de destino");
     }
 
-    const viewport = page.viewportSize();
-
-    if (!viewport) {
-      throw new Error("Não foi possível medir a viewport");
-    }
-
-    const visibleTargetLeft = Math.max(0, targetBox.x);
-    const visibleTargetRight = Math.min(
-      viewport.width,
-      targetBox.x + targetBox.width,
-    );
-    const visibleTargetX = (visibleTargetLeft + visibleTargetRight) / 2;
-
     await page.mouse.move(
       sourceBox.x + sourceBox.width / 2,
       sourceBox.y + sourceBox.height / 2,
@@ -62,9 +52,11 @@ test("move uma candidatura para uma coluna vazia e persiste após recarregar", a
     await page.mouse.move(sourceBox.x + sourceBox.width / 2 + 12, sourceBox.y, {
       steps: 3,
     });
-    await page.mouse.move(visibleTargetX, targetBox.y + 120, {
-      steps: 20,
-    });
+    await page.mouse.move(
+      targetBox.x + targetBox.width / 2,
+      targetBox.y + 120,
+      { steps: 20 },
+    );
     await page.mouse.up();
   }
 
@@ -264,7 +256,14 @@ test("mantém o quadro navegável no desktop e no mobile", async ({
       clientWidth: element.clientWidth,
       scrollWidth: element.scrollWidth,
     }));
-    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+    expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.clientWidth);
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect
+      .poll(async () =>
+        board.evaluate((element) => element.scrollWidth <= element.clientWidth),
+      )
+      .toBe(true);
     await expect(
       page.getByRole("region", { name: "Portais de Vagas" }),
     ).toBeInViewport();
@@ -425,11 +424,10 @@ test("gerencia recursos, busca em todas as listas e persiste o tema", async ({
 
   const notesColumn = page.getByRole("region", { name: "Anotações" });
   await notesColumn.getByRole("button", { name: "Nova anotação" }).click();
-  await page
-    .getByLabel("Conteúdo")
-    .fill("Revisar currículo antes da entrevista");
+  await page.getByLabel("Título (opcional)").fill("Revisar currículo");
+  await page.getByLabel("Conteúdo").fill("Antes da entrevista");
   await page.getByRole("button", { name: "Salvar anotação" }).click();
-  await expect(notesColumn.getByText(/Revisar currículo/)).toBeVisible();
+  await expect(notesColumn.getByText("Revisar currículo")).toBeVisible();
 
   await page
     .getByRole("searchbox", { name: "Buscar em todo o Totion" })
@@ -437,7 +435,7 @@ test("gerencia recursos, busca em todas as listas e persiste o tema", async ({
   await expect(
     page.getByText("1 resultado encontrado.", { exact: false }),
   ).toBeVisible();
-  await expect(notesColumn.getByText(/Revisar currículo/)).toBeVisible();
+  await expect(notesColumn.getByText("Revisar currículo")).toBeVisible();
   await expect(portalsColumn.getByText("LinkedIn Jobs")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Ativar tema escuro" }).click();
@@ -448,12 +446,12 @@ test("gerencia recursos, busca em todas as listas e persiste o tema", async ({
     page.getByRole("button", { name: "Ativar tema claro" }),
   ).toBeVisible();
   await expect(page.getByText("LinkedIn Jobs")).toBeAttached();
-  await expect(page.getByText(/Revisar currículo/)).toBeAttached();
+  await expect(page.getByText("Revisar currículo")).toBeAttached();
 });
 
 test("quebra nomes longos sem ultrapassar os limites do card", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.goto("/");
   const longName = `Frontend-${"endereco-sem-espacos-".repeat(12)}`;
   await createApplication(page, longName);
@@ -465,8 +463,33 @@ test("quebra nomes longos sem ultrapassar os limites do card", async ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
   }));
+  const cardBox = await card.boundingBox();
+  const titleBox = await card.getByRole("heading", { level: 3 }).boundingBox();
+  const actionButtons = card.getByRole("button");
+  const actionBoxes = await actionButtons.evaluateAll((buttons) =>
+    buttons.map((button) => {
+      const bounds = button.getBoundingClientRect();
+      return { bottom: bounds.bottom, right: bounds.right };
+    }),
+  );
+  const actions = card.locator(".application-card-actions");
+
+  if (!cardBox || !titleBox) {
+    throw new Error("Não foi possível medir o card de candidatura");
+  }
 
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
+  expect(titleBox.y).toBeLessThan(
+    Math.max(...actionBoxes.map(({ bottom }) => bottom)),
+  );
+  expect(
+    Math.max(...actionBoxes.map(({ right }) => right)),
+  ).toBeLessThanOrEqual(cardBox.x + cardBox.width);
+  if (testInfo.project.name === "chromium-desktop") {
+    await expect(actions).toHaveCSS("opacity", "0");
+    await card.hover();
+  }
+  await expect(actions).toHaveCSS("opacity", "1");
   expect(
     await page.evaluate(
       () =>

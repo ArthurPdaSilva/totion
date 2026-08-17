@@ -142,7 +142,7 @@ export function App({
     : jobPortals;
   const filteredNotes = isSearchActive
     ? notes.filter((note) =>
-        includesSearchTerm([note.content], normalizedSearchQuery),
+        includesSearchTerm([note.title, note.content], normalizedSearchQuery),
       )
     : notes;
   const searchResultCount =

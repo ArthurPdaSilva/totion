@@ -71,7 +71,7 @@ Nome, status e data da aplicação são obrigatórios. O link e as anotações s
 - Links externos devem abrir com proteção contra acesso à página de origem.
 - Um card deve continuar editável depois de movido ou reordenado.
 - Portais possuem nome e URL HTTP(S) obrigatórios e nunca são arrastáveis.
-- Anotações independentes possuem conteúdo obrigatório e nunca são arrastáveis.
+- Anotações independentes possuem título opcional, conteúdo obrigatório e nunca são arrastáveis.
 - Durante uma busca, o drag fica pausado para não reordenar apenas um subconjunto filtrado.
 
 ## Persistência Inicial
@@ -145,6 +145,7 @@ O schema inicial é criado por migration. Criação, mudança de status e reorde
 ### `notes`
 
 - `id`: identificador único.
+- `title`: título opcional.
 - `content`: texto livre obrigatório.
 - `createdAt` e `updatedAt`: instantes técnicos em UTC.
 
@@ -154,7 +155,7 @@ O schema inicial é criado por migration. Criação, mudança de status e reorde
 - Identidade própria; a referência ao Notion é de interação, não de cópia visual.
 - Cada status terá cor de apoio distinta, mantendo contraste adequado.
 - Cards devem priorizar nome, data e acesso ao link sem exibir anotações longas por completo.
-- No desktop, as cinco colunas dividem a largura disponível sem rolagem horizontal.
+- A partir de 1440px, as cinco colunas dividem a largura disponível sem rolagem horizontal.
 - Em telas menores, as colunas podem ser navegadas horizontalmente sem quebrar o drag-and-drop.
 - Colunas longas devem manter apenas lotes progressivos de cards montados para reduzir o custo do drag-and-drop.
 - Estados de foco, hover, arraste, vazio, carregamento e erro devem ser explícitos.
@@ -163,7 +164,7 @@ O schema inicial é criado por migration. Criação, mudança de status e reorde
 
 ## Backup Do Quadro
 
-O menu **Backup** exporta um arquivo `.totion` em JSON com versão explícita. A versão atual inclui candidaturas, portais e anotações, além dos IDs estáveis e da posição dos cards nas três colunas de status. Backups da versão anterior, que continham apenas candidaturas, continuam aceitos.
+O menu **Backup** exporta um arquivo `.totion` em JSON com versão explícita. A versão 3 inclui candidaturas, portais e anotações com título opcional, além dos IDs estáveis e da posição dos cards nas três colunas de status. Backups das versões 1 e 2 continuam aceitos.
 
 Ao restaurar um backup, a aplicação:
 

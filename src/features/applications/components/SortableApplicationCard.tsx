@@ -67,7 +67,7 @@ export function SortableApplicationCard({
               setActivatorNodeRef(node);
             }}
             type="button"
-            className="flex h-10 w-10 touch-none items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-canvas-deep hover:text-ink hover:opacity-100 focus-visible:opacity-100 xl:h-8 xl:w-8 2xl:h-10 2xl:w-10"
+            className="flex h-10 w-10 touch-none items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-canvas-deep hover:text-ink hover:opacity-100 focus-visible:opacity-100 min-[1440px]:h-8 min-[1440px]:w-8 2xl:h-10 2xl:w-10"
             title="Mover candidatura"
             disabled={isDragDisabled}
             {...attributes}

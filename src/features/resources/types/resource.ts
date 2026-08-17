@@ -8,6 +8,7 @@ export type JobPortal = {
 
 export type WorkspaceNote = {
   id: string;
+  title: string | null;
   content: string;
   createdAt: string;
   updatedAt: string;

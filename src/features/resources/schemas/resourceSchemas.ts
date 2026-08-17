@@ -22,8 +22,13 @@ export const jobPortalSchema = z.object({
 });
 
 export const workspaceNoteSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .transform((value) => (value.length > 0 ? value : null)),
   content: z.string().trim().min(1, "Escreva o conteúdo da anotação"),
 });
 
 export type JobPortalInput = z.output<typeof jobPortalSchema>;
+export type WorkspaceNoteFormValues = z.input<typeof workspaceNoteSchema>;
 export type WorkspaceNoteInput = z.output<typeof workspaceNoteSchema>;

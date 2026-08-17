@@ -43,7 +43,7 @@ Cada item possui:
 ### Recursos Estáticos
 
 - Portais de Vagas possuem nome e URL HTTP(S) obrigatórios.
-- Anotações independentes possuem somente conteúdo obrigatório.
+- Anotações independentes possuem título opcional e conteúdo obrigatório.
 - Portais e anotações permitem criar, editar e excluir, mas nunca são draggable ou droppable.
 - A busca universal filtra candidaturas, portais e anotações sem diferenciar caixa ou acentos.
 - O drag-and-drop fica desabilitado enquanto houver um filtro de busca ativo.
@@ -101,7 +101,7 @@ A estratégia de `position` deve permitir inserções e reordenações consisten
 
 - O IndexedDB é a fonte persistente do MVP.
 - O backup próprio usa um arquivo `.totion` em JSON, com formato e versão explícitos.
-- A versão atual do backup inclui candidaturas, portais e anotações e mantém leitura da versão anterior.
+- A versão 3 do backup inclui candidaturas, portais e anotações com título opcional e mantém leitura das versões 1 e 2.
 - A restauração valida todo o arquivo e substitui todas as stores em uma única transação após confirmação explícita.
 - Toda evolução de schema deve ser versionada por migration.
 - Componentes e hooks de interface não acessam Dexie diretamente.
@@ -197,6 +197,7 @@ type JobPortal = {
 
 type WorkspaceNote = {
   id: string;
+  title: string | null;
   content: string;
   createdAt: string;
   updatedAt: string;
@@ -236,7 +237,7 @@ Limites máximos de texto devem ser decididos e testados antes da implementaçã
 - Oferecer áreas de interação adequadas para toque.
 - Respeitar `prefers-reduced-motion` nas animações.
 - No mobile, permitir navegação horizontal pelas colunas sem bloquear a rolagem vertical da página.
-- A partir do breakpoint desktop, exibir as cinco colunas lado a lado sem rolagem horizontal.
+- A partir de 1440px, exibir as cinco colunas lado a lado sem rolagem horizontal.
 - Preservar os padrões visuais já implementados antes de introduzir novos componentes.
 - O tema inicia claro, é alternado por controle acessível e persiste somente a escolha manual no `localStorage`.
 

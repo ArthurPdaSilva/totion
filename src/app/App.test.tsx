@@ -244,6 +244,7 @@ function createWorkspaceNote(
 ): WorkspaceNote {
   return {
     id: "note-1",
+    title: null,
     content: "Revisar currículo",
     createdAt: "2026-08-16T12:00:00.000Z",
     updatedAt: "2026-08-16T12:00:00.000Z",
@@ -314,6 +315,7 @@ describe("App", () => {
     await user.click(
       within(notesColumn).getByRole("button", { name: "Nova anotação" }),
     );
+    await user.type(screen.getByLabelText("Título (opcional)"), "Preparação");
     await user.type(
       screen.getByLabelText("Conteúdo"),
       "Revisar o currículo antes da próxima candidatura.",
@@ -322,6 +324,18 @@ describe("App", () => {
     expect(
       within(notesColumn).getByText(/Revisar o currículo/),
     ).toBeInTheDocument();
+    expect(within(notesColumn).getByText("Preparação")).toBeInTheDocument();
+    await user.click(
+      within(notesColumn).getByRole("button", {
+        name: "Editar anotação: Preparação",
+      }),
+    );
+    await user.clear(screen.getByLabelText("Título (opcional)"));
+    await user.click(screen.getByRole("button", { name: "Salvar anotação" }));
+    expect(
+      within(notesColumn).queryByText("Preparação"),
+    ).not.toBeInTheDocument();
+    expect(workspaceRepository.notes[0]?.title).toBeNull();
 
     await user.click(
       within(portalsColumn).getByRole("button", { name: "Excluir" }),
@@ -355,7 +369,10 @@ describe("App", () => {
       createJobPortal({ name: "Portal Currículo Especial" }),
     ];
     workspaceRepository.notes = [
-      createWorkspaceNote({ content: "Currículo especial revisado" }),
+      createWorkspaceNote({
+        title: "Currículo especial",
+        content: "Documento revisado",
+      }),
     ];
     render(
       <App repository={repository} workspaceRepository={workspaceRepository} />,
@@ -375,7 +392,7 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Vaga currículo especial")).toBeInTheDocument();
     expect(screen.getByText("Portal Currículo Especial")).toBeInTheDocument();
-    expect(screen.getByText("Currículo especial revisado")).toBeInTheDocument();
+    expect(screen.getByText("Currículo especial")).toBeInTheDocument();
     expect(screen.queryByText("Outra oportunidade")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", {

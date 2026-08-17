@@ -141,7 +141,7 @@ export function ApplicationColumn({
   return (
     <section
       ref={setNodeRef}
-      className={`w-board-column shrink-0 snap-start rounded-panel border ${styles.border} ${styles.surface} p-3 transition sm:p-4 xl:w-auto xl:min-w-0 xl:flex-1 xl:shrink xl:snap-none xl:p-3 2xl:p-4 ${isOver ? "ring-3 ring-focus/20" : ""}`}
+      className={`w-board-column shrink-0 snap-start rounded-panel border ${styles.border} ${styles.surface} p-3 transition sm:p-4 min-[1440px]:w-auto min-[1440px]:min-w-0 min-[1440px]:flex-1 min-[1440px]:shrink min-[1440px]:snap-none min-[1440px]:p-3 2xl:p-4 ${isOver ? "ring-3 ring-focus/20" : ""}`}
       aria-labelledby={headingId}
     >
       <header className="mb-4 flex min-h-8 items-center justify-between gap-3 px-1">

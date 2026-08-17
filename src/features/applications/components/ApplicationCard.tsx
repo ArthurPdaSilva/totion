@@ -19,17 +19,14 @@ export function ApplicationCard({
   onRequestDelete,
 }: ApplicationCardProps) {
   return (
-    <article className="group rounded-card border border-line bg-card p-4 shadow-card transition duration-200 ease-standard hover:-translate-y-0.5 hover:border-line-strong hover:shadow-card-hover motion-reduce:transform-none xl:p-3 2xl:p-4">
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="min-w-0 flex-1 break-words pt-1 text-[0.9375rem] leading-6 font-semibold text-ink">
-          {application.name}
-        </h3>
-        <div className="flex shrink-0 items-center">
+    <article className="application-card group relative rounded-card border border-line bg-card p-4 shadow-card transition duration-200 ease-standard hover:-translate-y-0.5 hover:border-line-strong hover:shadow-card-hover motion-reduce:transform-none min-[1440px]:p-3 2xl:p-4">
+      <header className="application-card-actions absolute top-3 right-3 z-10 flex items-center rounded-button border border-line bg-card/95 p-0.5 shadow-card backdrop-blur-sm transition duration-200 ease-standard 2xl:top-4 2xl:right-4">
+        <div className="flex items-center">
           {dragHandle}
           <button
             id={`edit-application-${application.id}`}
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-info-soft hover:text-info hover:opacity-100 focus-visible:opacity-100 xl:h-8 xl:w-8 2xl:h-10 2xl:w-10"
+            className="flex h-10 w-10 items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-info-soft hover:text-info hover:opacity-100 focus-visible:opacity-100 min-[1440px]:h-8 min-[1440px]:w-8 2xl:h-10 2xl:w-10"
             aria-label={`Editar candidatura ${application.name}`}
             title="Editar candidatura"
             onClick={(event) => onRequestEdit(application, event.currentTarget)}
@@ -38,7 +35,7 @@ export function ApplicationCard({
           </button>
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-danger-soft hover:text-danger hover:opacity-100 focus-visible:opacity-100 xl:h-8 xl:w-8 2xl:h-10 2xl:w-10"
+            className="flex h-10 w-10 items-center justify-center rounded-button text-muted opacity-70 transition hover:bg-danger-soft hover:text-danger hover:opacity-100 focus-visible:opacity-100 min-[1440px]:h-8 min-[1440px]:w-8 2xl:h-10 2xl:w-10"
             aria-label={`Excluir candidatura ${application.name}`}
             title="Excluir candidatura"
             onClick={(event) =>
@@ -48,7 +45,14 @@ export function ApplicationCard({
             <TrashIcon />
           </button>
         </div>
-      </div>
+      </header>
+
+      <h3
+        className="line-clamp-4 break-words text-[0.9375rem] leading-6 font-semibold text-ink"
+        title={application.name}
+      >
+        {application.name}
+      </h3>
 
       <dl className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-3 text-xs text-muted">
         <div className="flex items-center gap-1.5">

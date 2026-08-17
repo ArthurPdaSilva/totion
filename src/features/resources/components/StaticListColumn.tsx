@@ -81,7 +81,7 @@ export function StaticListColumn<T extends { id: string }>({
 
   return (
     <section
-      className={`w-board-column shrink-0 snap-start rounded-panel border border-line p-3 sm:p-4 xl:w-auto xl:min-w-0 xl:flex-1 xl:shrink xl:snap-none xl:p-3 2xl:p-4 ${surfaceClassName}`}
+      className={`w-board-column shrink-0 snap-start rounded-panel border border-line p-3 sm:p-4 min-[1440px]:w-auto min-[1440px]:min-w-0 min-[1440px]:flex-1 min-[1440px]:shrink min-[1440px]:snap-none min-[1440px]:p-3 2xl:p-4 ${surfaceClassName}`}
       aria-labelledby={headingId}
     >
       <header className="mb-4 flex min-h-8 items-center justify-between gap-3 px-1">

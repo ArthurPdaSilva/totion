@@ -19,10 +19,16 @@ describe("resourceSchemas", () => {
 
   it("exige conteúdo e preserva quebras internas da anotação", () => {
     expect(
-      workspaceNoteSchema.parse({ content: "  Linha 1\n\nLinha 2  " }),
-    ).toEqual({ content: "Linha 1\n\nLinha 2" });
-    expect(workspaceNoteSchema.safeParse({ content: "   " }).success).toBe(
-      false,
-    );
+      workspaceNoteSchema.parse({
+        title: "  Lembrete  ",
+        content: "  Linha 1\n\nLinha 2  ",
+      }),
+    ).toEqual({ title: "Lembrete", content: "Linha 1\n\nLinha 2" });
+    expect(
+      workspaceNoteSchema.parse({ title: "   ", content: "Conteúdo" }),
+    ).toEqual({ title: null, content: "Conteúdo" });
+    expect(
+      workspaceNoteSchema.safeParse({ title: "", content: "   " }).success,
+    ).toBe(false);
   });
 });

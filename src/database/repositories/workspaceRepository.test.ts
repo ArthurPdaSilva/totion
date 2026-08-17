@@ -45,6 +45,7 @@ function createJobPortal(id: string): JobPortal {
 function createNote(id: string): WorkspaceNote {
   return {
     id,
+    title: null,
     content: `Anotação ${id}`,
     createdAt: "2026-08-16T12:00:00.000Z",
     updatedAt: "2026-08-16T12:00:00.000Z",
@@ -105,6 +106,32 @@ describe("DexieWorkspaceRepository", () => {
     await repository.deleteNote(note.id);
     await expect(repository.listJobPortals()).resolves.toEqual([]);
     await expect(repository.listNotes()).resolves.toEqual([]);
+  });
+
+  it("adiciona título nulo às anotações criadas antes da versão 3", async () => {
+    const databaseName = `totion-note-migration-${crypto.randomUUID()}`;
+    const legacyDatabase = new Dexie(databaseName);
+    legacyDatabase.version(2).stores({
+      applications: "id, status, [status+position], createdAt",
+      jobPortals: "id, createdAt",
+      notes: "id, createdAt",
+    });
+    await legacyDatabase.table("notes").add({
+      id: "legacy-note",
+      content: "Anotação sem título",
+      createdAt: "2026-08-16T12:00:00.000Z",
+      updatedAt: "2026-08-16T12:00:00.000Z",
+    });
+    legacyDatabase.close();
+
+    const database = new TotionDatabase(databaseName);
+    databases.push(database);
+
+    await expect(database.notes.get("legacy-note")).resolves.toMatchObject({
+      id: "legacy-note",
+      title: null,
+      content: "Anotação sem título",
+    });
   });
 
   it("restaura as cinco listas em uma transação e faz rollback em falha", async () => {

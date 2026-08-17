@@ -23,6 +23,7 @@ const JOB_PORTALS: JobPortal[] = [
 const NOTES: WorkspaceNote[] = [
   {
     id: "note-1",
+    title: "Lembrete",
     content: "Anotação independente",
     createdAt: "2026-08-16T14:30:00.000Z",
     updatedAt: "2026-08-16T14:30:00.000Z",
@@ -59,7 +60,7 @@ describe("applicationBackup", () => {
       success: true,
       backup: {
         format: "totion",
-        version: 2,
+        version: 3,
         exportedAt,
         applications: APPLICATIONS,
         jobPortals: JOB_PORTALS,
@@ -74,7 +75,7 @@ describe("applicationBackup", () => {
       error: "O arquivo não contém um backup Totion válido.",
     });
     expect(
-      parseApplicationBackup(JSON.stringify({ format: "totion", version: 3 })),
+      parseApplicationBackup(JSON.stringify({ format: "totion", version: 4 })),
     ).toEqual({
       success: false,
       error: "O formato ou a versão deste backup não é compatível.",
@@ -92,10 +93,29 @@ describe("applicationBackup", () => {
     expect(parseApplicationBackup(JSON.stringify(legacyBackup))).toMatchObject({
       success: true,
       backup: {
-        version: 2,
+        version: 3,
         applications: APPLICATIONS,
         jobPortals: [],
         notes: [],
+      },
+    });
+  });
+
+  it("restaura backups v2 adicionando título nulo às anotações", () => {
+    const legacyBackup = {
+      format: "totion",
+      version: 2,
+      exportedAt: "2026-08-16T15:00:00.000Z",
+      applications: APPLICATIONS,
+      jobPortals: JOB_PORTALS,
+      notes: NOTES.map(({ title: _title, ...note }) => note),
+    };
+
+    expect(parseApplicationBackup(JSON.stringify(legacyBackup))).toMatchObject({
+      success: true,
+      backup: {
+        version: 3,
+        notes: [{ id: "note-1", title: null }],
       },
     });
   });

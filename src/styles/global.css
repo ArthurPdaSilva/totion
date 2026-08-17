@@ -61,6 +61,21 @@ dialog::backdrop {
   backdrop-filter: blur(5px);
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .application-card-actions {
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+
+  .application-card:hover > .application-card-actions,
+  .application-card:focus-within > .application-card-actions {
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

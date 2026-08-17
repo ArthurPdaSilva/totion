@@ -9,7 +9,7 @@ import { applicationSchema } from "../schemas/applicationSchema";
 import type { Application } from "../types/application";
 
 const BACKUP_FORMAT = "totion";
-const BACKUP_VERSION = 2;
+const BACKUP_VERSION = 3;
 const UTC_TIMESTAMP_PATTERN =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 
@@ -57,7 +57,7 @@ const backupJobPortalSchema = z
   })
   .strict();
 
-const backupWorkspaceNoteSchema = z
+const legacyBackupWorkspaceNoteSchema = z
   .object({
     id: z.string().min(1),
     content: z.string(),
@@ -66,12 +66,27 @@ const backupWorkspaceNoteSchema = z
   })
   .strict();
 
+const backupWorkspaceNoteSchema = legacyBackupWorkspaceNoteSchema.extend({
+  title: z.string().nullable(),
+});
+
 const legacyBackupSchema = z
   .object({
     format: z.literal(BACKUP_FORMAT),
     version: z.literal(1),
     exportedAt: timestampSchema,
     applications: z.array(backupApplicationSchema),
+  })
+  .strict();
+
+const legacyResourcesBackupSchema = z
+  .object({
+    format: z.literal(BACKUP_FORMAT),
+    version: z.literal(2),
+    exportedAt: timestampSchema,
+    applications: z.array(backupApplicationSchema),
+    jobPortals: z.array(backupJobPortalSchema),
+    notes: z.array(legacyBackupWorkspaceNoteSchema),
   })
   .strict();
 
@@ -176,7 +191,7 @@ export function parseApplicationBackup(
   if (
     !isRecord(value) ||
     value.format !== BACKUP_FORMAT ||
-    (value.version !== 1 && value.version !== BACKUP_VERSION)
+    ![1, 2, BACKUP_VERSION].includes(Number(value.version))
   ) {
     return {
       success: false,
@@ -187,7 +202,9 @@ export function parseApplicationBackup(
   const parsedBackup =
     value.version === 1
       ? legacyBackupSchema.safeParse(value)
-      : backupSchema.safeParse(value);
+      : value.version === 2
+        ? legacyResourcesBackupSchema.safeParse(value)
+        : backupSchema.safeParse(value);
 
   if (!parsedBackup.success) {
     return {
@@ -228,11 +245,9 @@ export function parseApplicationBackup(
   }
 
   const rawJobPortals =
-    parsedBackup.data.version === BACKUP_VERSION
-      ? parsedBackup.data.jobPortals
-      : [];
+    parsedBackup.data.version === 1 ? [] : parsedBackup.data.jobPortals;
   const rawNotes =
-    parsedBackup.data.version === BACKUP_VERSION ? parsedBackup.data.notes : [];
+    parsedBackup.data.version === 1 ? [] : parsedBackup.data.notes;
   const jobPortals: JobPortal[] = [];
   const notes: WorkspaceNote[] = [];
 
@@ -250,7 +265,10 @@ export function parseApplicationBackup(
   }
 
   for (const note of rawNotes) {
-    const parsedNote = workspaceNoteSchema.safeParse(note);
+    const parsedNote = workspaceNoteSchema.safeParse({
+      title: "title" in note ? (note.title ?? "") : "",
+      content: note.content,
+    });
 
     if (!parsedNote.success) {
       return {

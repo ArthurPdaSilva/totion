@@ -64,9 +64,17 @@ export function WorkspaceNotesColumn({
         renderItem={(note) => (
           <article
             key={note.id}
-            className="rounded-card border border-line bg-card p-4 shadow-card xl:p-3 2xl:p-4"
+            className="rounded-card border border-line bg-card p-4 shadow-card min-[1440px]:p-3 2xl:p-4"
           >
-            <p className="whitespace-pre-wrap break-words text-sm leading-6 text-ink">
+            {note.title ? (
+              <h3 className="line-clamp-2 break-words text-[0.9375rem] leading-6 font-semibold text-ink">
+                {note.title}
+              </h3>
+            ) : null}
+            <p
+              className={`${note.title ? "mt-2" : ""} line-clamp-8 whitespace-pre-wrap break-words text-sm leading-6 text-ink`}
+              title={note.content}
+            >
               {note.content}
             </p>
             <div className="mt-3 flex gap-2 border-t border-line pt-3">
@@ -74,6 +82,7 @@ export function WorkspaceNotesColumn({
                 id={`edit-workspace-note-${note.id}`}
                 type="button"
                 className="min-h-10 flex-1 rounded-button text-xs font-bold text-success hover:bg-success-soft"
+                aria-label={`Editar anotação: ${note.title ?? note.content}`}
                 onClick={(event) => {
                   lastTriggerRef.current = event.currentTarget;
                   setNoteToEdit(note);
@@ -85,6 +94,7 @@ export function WorkspaceNotesColumn({
               <button
                 type="button"
                 className="min-h-10 flex-1 rounded-button text-xs font-bold text-danger hover:bg-danger-soft"
+                aria-label={`Excluir anotação: ${note.title ?? note.content}`}
                 onClick={(event) => {
                   lastTriggerRef.current = event.currentTarget;
                   setNoteToDelete(note);
@@ -110,7 +120,7 @@ export function WorkspaceNotesColumn({
       {noteToDelete ? (
         <DeleteResourceDialog
           itemType="anotação"
-          itemDescription={noteToDelete.content}
+          itemDescription={noteToDelete.title ?? noteToDelete.content}
           onCancel={closeDeletion}
           onDelete={() => onDelete(noteToDelete.id)}
           onDeleted={() => {

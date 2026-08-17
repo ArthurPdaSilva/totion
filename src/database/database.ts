@@ -6,6 +6,7 @@ import type {
 } from "../features/resources/types/resource";
 import { registerInitialSchema } from "./migrations/001InitialSchema";
 import { registerWorkspaceResources } from "./migrations/002WorkspaceResources";
+import { registerWorkspaceNoteTitles } from "./migrations/003WorkspaceNoteTitles";
 
 export class TotionDatabase extends Dexie {
   applications: Table<Application, string>;
@@ -16,6 +17,7 @@ export class TotionDatabase extends Dexie {
     super(name);
     registerInitialSchema(this);
     registerWorkspaceResources(this);
+    registerWorkspaceNoteTitles(this);
     this.applications = this.table("applications");
     this.jobPortals = this.table("jobPortals");
     this.notes = this.table("notes");

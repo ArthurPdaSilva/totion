@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { notification } from "../../../shared/notifications";
 import {
+  type WorkspaceNoteFormValues,
   type WorkspaceNoteInput,
   workspaceNoteSchema,
 } from "../schemas/resourceSchemas";
@@ -26,9 +27,12 @@ export function WorkspaceNoteFormDialog({
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<WorkspaceNoteInput>({
+  } = useForm<WorkspaceNoteFormValues, unknown, WorkspaceNoteInput>({
     resolver: zodResolver(workspaceNoteSchema),
-    defaultValues: { content: note?.content ?? "" },
+    defaultValues: {
+      title: note?.title ?? "",
+      content: note?.content ?? "",
+    },
   });
 
   useEffect(() => {
@@ -108,6 +112,20 @@ export function WorkspaceNoteFormDialog({
         ) : null}
         <label
           className="block text-sm font-bold"
+          htmlFor="workspace-note-title"
+        >
+          Título <span className="font-normal text-muted">(opcional)</span>
+        </label>
+        <input
+          id="workspace-note-title"
+          className="mt-2 min-h-11 w-full rounded-button border border-line-strong bg-card px-3.5 py-2.5 text-sm text-ink focus:border-focus focus:outline-none focus:ring-3 focus:ring-focus/15"
+          autoFocus
+          placeholder="Ex.: Mensagem de confirmação"
+          {...register("title")}
+        />
+
+        <label
+          className="mt-5 block text-sm font-bold"
           htmlFor="workspace-note-content"
         >
           Conteúdo
@@ -115,7 +133,6 @@ export function WorkspaceNoteFormDialog({
         <textarea
           id="workspace-note-content"
           className="mt-2 min-h-44 w-full resize-y rounded-button border border-line-strong bg-card px-3.5 py-3 text-sm leading-6 text-ink focus:border-focus focus:outline-none focus:ring-3 focus:ring-focus/15 aria-invalid:border-danger"
-          autoFocus
           placeholder="Escreva o que você quiser guardar..."
           aria-invalid={Boolean(errors.content)}
           {...register("content")}

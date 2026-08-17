@@ -68,7 +68,7 @@ export function JobPortalsColumn({
         renderItem={(jobPortal) => (
           <article
             key={jobPortal.id}
-            className="rounded-card border border-line bg-card p-4 shadow-card xl:p-3 2xl:p-4"
+            className="rounded-card border border-line bg-card p-4 shadow-card min-[1440px]:p-3 2xl:p-4"
           >
             <h3 className="break-words text-[0.9375rem] leading-6 font-semibold text-ink">
               {jobPortal.name}
