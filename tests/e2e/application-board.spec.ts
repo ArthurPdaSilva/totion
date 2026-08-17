@@ -156,11 +156,17 @@ test("move pelo teclado para uma coluna vazia e mantém o foco", async ({
 
 test("altera o status pelo formulário e persiste após recarregar", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.goto("/");
   await createApplication(page, "Pessoa desenvolvedora mobile");
 
-  await page
+  const applicationCard = page.getByRole("article").filter({
+    has: page.getByRole("heading", { name: "Pessoa desenvolvedora mobile" }),
+  });
+  if (testInfo.project.name === "chromium-desktop") {
+    await applicationCard.hover();
+  }
+  await applicationCard
     .getByRole("button", {
       name: "Editar candidatura Pessoa desenvolvedora mobile",
     })
@@ -188,11 +194,17 @@ test("altera o status pelo formulário e persiste após recarregar", async ({
 
 test("exclui uma candidatura e mantém a exclusão após recarregar", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.goto("/");
   await createApplication(page, "Candidatura temporária");
 
-  await page
+  const applicationCard = page.getByRole("article").filter({
+    has: page.getByRole("heading", { name: "Candidatura temporária" }),
+  });
+  if (testInfo.project.name === "chromium-desktop") {
+    await applicationCard.hover();
+  }
+  await applicationCard
     .getByRole("button", {
       name: "Excluir candidatura Candidatura temporária",
     })
