@@ -187,11 +187,11 @@ export function App({
         : null;
 
       if (currentEditButton instanceof HTMLButtonElement) {
-        currentEditButton.focus();
+        currentEditButton.focus({ preventScroll: true });
       } else if (editButtonRef.current?.isConnected) {
-        editButtonRef.current.focus();
+        editButtonRef.current.focus({ preventScroll: true });
       } else {
-        createButtonRef.current?.focus();
+        createButtonRef.current?.focus({ preventScroll: true });
       }
     }, 0);
   }
